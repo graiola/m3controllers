@@ -68,10 +68,10 @@ add_subdirectory(m3_controller_interface)
 add_subdirectory(m3_controller_manager)
 add_subdirectory(sin_controller)
 add_subdirectory(joints_controller)
-add_subdirectory(dmp_controller) #NOTE no way to check if dmpboo is installed...
 #add_subdirectory(torque_controller)
 if(kdl_kinematics_FOUND)
         add_subdirectory(cart_controller)
+        add_subdirectory(dmp_controller) #NOTE no way to check if dmpboo is installed...
 endif()
 
 ###############################################################################
