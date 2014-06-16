@@ -1,0 +1,13 @@
+########### M3 CONFIG ######################
+factory_rt_libs:
+  - /home/meka/catkin_workspace/install_isolated/lib/libkdl_kinematics.so
+  - /home/meka/m3controllers/lib/libm3controllers.so
+
+rt_components:
+  m3controllers:
+#    sin_controller_test: sin_controller
+#    dmp_controller_test: dmp_controller
+#    cart_controller_test: cart_controller
+#    m3dynamatics_right_arm_test: m3dynamatics
+#    torque_controller_test: torque_controller
+    joints_controller_test: joints_controller

@@ -1,0 +1,30 @@
+option optimize_for = SPEED;
+//import "m3ens/m3_controllers/m3_controller_interface/m3_controller_interface.proto";
+
+message CartControllerStatus
+{
+	//optional M3ControllerStatus controller=1;
+	optional double x=2		[default = 0.0];
+	optional double y=3		[default = 0.0];
+	optional double z=4		[default = 0.0];
+	optional double roll=5		[default = 0.0];
+	optional double pitch=6		[default = 0.0];
+	optional double yaw=7		[default = 0.0];
+}
+
+message CartControllerParam
+{
+	//optional M3ControllerParam controller=1;
+}
+
+message CartControllerCommand
+{
+	optional bool enable=1	        [default = false]; //turn  on/off
+	optional double x=2		[default = 0.0];
+	optional double y=3		[default = 0.0];
+	optional double z=4		[default = 0.0];
+	optional double roll=5		[default = 0.0];
+	optional double pitch=6		[default = 0.0];
+	optional double yaw=7		[default = 0.0];
+	//optional M3ControllerCommand controller_interface=1;
+}

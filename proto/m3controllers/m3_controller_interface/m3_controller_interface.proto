@@ -1,0 +1,17 @@
+option optimize_for = SPEED;
+import "component_base.proto";
+
+message M3ControllerStatus
+{
+	optional M3BaseStatus base=1; //reserved
+}
+
+message M3ControllerParam
+{
+}
+
+message M3ControllerCommand
+{
+	optional bool enable=1	[default = false]; //turn  on/off
+}
+

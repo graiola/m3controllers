@@ -1,0 +1,18 @@
+option optimize_for = SPEED;
+
+message TorqueControllerStatus
+{
+	//optional M3ControllerStatus controller=1;
+}
+
+message TorqueControllerParam
+{
+	//optional M3ControllerParam controller=1;
+}
+
+message TorqueControllerCommand
+{
+	//optional M3ControllerCommand controller=1;
+	optional double c=2	[default = 0.5]; //compliance
+}
+

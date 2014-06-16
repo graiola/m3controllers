@@ -1,0 +1,10 @@
+name: sin_controller_test
+shm_id: M3SIN
+humanoid: m3humanoid_right_left_arm_head_mr12
+chain: RIGHT_ARM
+joints_mask: 1,0,0,0,0,0,0
+controller_type: pos
+centers: [0,0,0,0,0,0,0]
+periods: [6,0,0,0,0,0,0]
+magnitudes: [0.3,0,0,0,0,0,0]
+sec_to_dump: 40

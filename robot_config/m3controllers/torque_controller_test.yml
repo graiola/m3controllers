@@ -1,0 +1,12 @@
+name: torque_controller_test
+shm_id: M3TRQ
+humanoid: m3humanoid_right_left_arm_head_mr12
+chain: RIGHT_ARM
+dyn_name: m3dynamatics_right_arm_test
+mask: 1,1,1,1,1,1,1
+sec_to_record: 15
+torque_output_file: /home/meka/mekabot/m3ens/m3_controllers/src/torque_controller/torque.txt
+force_output_file: /home/meka/mekabot/m3ens/m3_controllers/src/torque_controller/force.txt
+pos_output_file: /home/meka/mekabot/m3ens/m3_controllers/src/torque_controller/pos.txt
+vel_output_file: /home/meka/mekabot/m3ens/m3_controllers/src/torque_controller/vel.txt
+acc_output_file: /home/meka/mekabot/m3ens/m3_controllers/src/torque_controller/acc.txt

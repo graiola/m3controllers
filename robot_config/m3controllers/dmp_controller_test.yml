@@ -1,0 +1,3 @@
+name: dmp_controller_test
+kin_name: cart_controller_test
+dmp_file: /home/meka/m3controllers/src/m3controllers/dmp_controller/dmp_0.xml

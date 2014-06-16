@@ -1,0 +1,8 @@
+name: joints_controller_test
+shm_id: M3JNT
+humanoid: m3humanoid_right_left_arm_head_mr12
+chain: RIGHT_ARM
+joints_mask: 1,1,1,1,1,1,1
+controller_type: pos
+#joints_trj: /home/meka/mekabot/m3ens/m3_controllers/src/joints_controller/cmd.txt
+joints_position: [0.1,0.1,0.0,0.0,0.0,0.0,0.0]

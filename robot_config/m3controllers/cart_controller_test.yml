@@ -1,0 +1,21 @@
+name: cart_controller_test
+shm_id: M3CRT
+humanoid: m3humanoid_right_left_arm_head_mr12
+chain: RIGHT_ARM
+joints_mask: 1,1,1,1,1,1,1
+controller_type: pos
+#sec_to_dump: 40
+#ef_trj: /home/meka/mekabot/m3ens/src/m3ens/m3_controllers/cart_controller/cmd.txt
+#ef_pose: [0.3,0,-0.4,0,0,0]
+ef_use_sds: true
+ik:
+  damp_max: 0.8
+  epsilon: 0.1
+  cart_mask: 1,1,1,0,0,0
+  gain_x: 50
+  gain_y: 50
+  gain_z: 50
+  gain_roll: 10
+  gain_pitch: 10
+  gain_yaw: 10
+
