@@ -145,14 +145,16 @@ class M3Controller : public m3rt::M3CompShm
 				for (int i=0; i<Ndof_; i++)
 				{
 					if(joints_mask_[i]){	
-						bot_->SetModeThetaGc(chain_,i);
+
 						bot_->SetStiffness(chain_,i,1.0);
 						bot_->SetSlewRateProportional(chain_,i,1.0);
 						if(controller_type_=="pos"){
+							bot_->SetModeThetaGc(chain_,i);
 							bot_->SetThetaDeg(chain_,i,RAD2DEG(in[joints_mask_cnt_]));
 							joints_pos_cmd_[joints_mask_cnt_] = in[joints_mask_cnt_]; 
 						}
 						else if(controller_type_=="torques"){
+							bot_->SetModeTorqueGc(chain_,i);
 							bot_->SetTorque_mNm(chain_,i,m2mm(in[joints_mask_cnt_]));
 							joints_torques_cmd_[joints_mask_cnt_] = in[joints_mask_cnt_];
 						}
