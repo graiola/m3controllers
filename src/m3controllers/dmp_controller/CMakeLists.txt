@@ -15,7 +15,7 @@ add_library(${LIBNAME} ${SHARED_OR_STATIC} ${LIBNAME}.cpp ${LIBNAME}.pb.cc)
 
 ###############################################################################
 # Add dependency to m3_controller_interface
-#add_dependencies(${LIBNAME} m3_controller_interface)
+add_dependencies(${LIBNAME} cart_controller m3_controller_interface)
 
 ###############################################################################
 # Linking
