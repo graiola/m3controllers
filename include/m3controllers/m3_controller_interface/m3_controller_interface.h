@@ -82,6 +82,8 @@ class M3Controller : public m3rt::M3CompShm
 			joints_vel_status_.resize(Ndof_);
 			joints_acc_status_.resize(Ndof_);
 			joints_torques_status_.resize(Ndof_);
+			joints_torques_dot_status_.resize(Ndof_);
+
 			// Resize the command vectors
 			joints_pos_cmd_.resize(Ndof_);
 			joints_vel_cmd_.resize(Ndof_);
@@ -92,6 +94,7 @@ class M3Controller : public m3rt::M3CompShm
 			joints_vel_status_.fill(0.0);
 			joints_acc_status_.fill(0.0);
 			joints_torques_status_.fill(0.0);
+			joints_torques_dot_status_.fill(0.0);
 			
 			joints_pos_cmd_.fill(0.0);
 			joints_vel_cmd_.fill(0.0);
@@ -107,6 +110,7 @@ class M3Controller : public m3rt::M3CompShm
 				file_dumpers_.AddDumper(file_length_samples_,&joints_torques_status_,"joints_torques_status",file_path_);
 				file_dumpers_.AddDumper(file_length_samples_,&joints_pos_cmd_,"joints_pos_cmd",file_path_);
 				file_dumpers_.AddDumper(file_length_samples_,&joints_torques_cmd_,"joints_torques_cmd",file_path_);
+				file_dumpers_.AddDumper(file_length_samples_,&joints_torques_dot_status_,"joints_torques_dot_status",file_path_);
 			}
 			else
 				file_length_samples_ = 0;
@@ -183,6 +187,7 @@ class M3Controller : public m3rt::M3CompShm
 				joints_vel_status_[i] = DEG2RAD(bot_->GetThetaDotDeg(chain_,i));		
 				joints_acc_status_[i] = DEG2RAD(bot_->GetThetaDotDotDeg(chain_,i));
 				joints_torques_status_[i] = mm2m(bot_->GetTorque_mNm(chain_,i));// mNm -> Nm
+				joints_torques_dot_status_[i] = mm2m(bot_->GetTorqueDot_mNm(chain_,i));// mNm -> Nm
 			}
 			
 			if(m3_controller_interface_command_.enable())
@@ -192,12 +197,6 @@ class M3Controller : public m3rt::M3CompShm
 					
 #ifdef USE_ROS_RT_PUBLISHER
 			if(ros_nh_ptr_!=NULL){
-				/*pos_status_pub_->publish(joints_pos_status_);
-				vel_status_pub_->publish(joints_vel_status_);
-				acc_status_pub_->publish(joints_acc_status_);
-				torques_status_pub_->publish(joints_torques_status_);
-				pos_cmd_pub_->publish(joints_pos_cmd_);
-				torques_cmd_pub_->publish(joints_torques_cmd_);*/
 				rt_publishers_.PublishAll();
 			}
 #endif
@@ -301,6 +300,7 @@ class M3Controller : public m3rt::M3CompShm
 		joints_t joints_vel_status_;
 		joints_t joints_acc_status_;
 		joints_t joints_torques_status_;
+		joints_t joints_torques_dot_status_;
 		joints_t joints_pos_cmd_;
 		joints_t joints_vel_cmd_;
 		joints_t joints_acc_cmd_;
@@ -326,15 +326,9 @@ class M3Controller : public m3rt::M3CompShm
 				rt_publishers_.AddPublisher(*ros_nh_ptr_,"joints_status_vel",Ndof_,&joints_vel_status_);
 				rt_publishers_.AddPublisher(*ros_nh_ptr_,"joints_status_acc",Ndof_,&joints_acc_status_);
 				rt_publishers_.AddPublisher(*ros_nh_ptr_,"joints_status_torques",Ndof_,&joints_torques_status_);
+				rt_publishers_.AddPublisher(*ros_nh_ptr_,"joints_status_torques_dot",Ndof_,&joints_torques_dot_status_);
 				rt_publishers_.AddPublisher(*ros_nh_ptr_,"joints_cmd_pos",Ndof_,&joints_pos_cmd_);
 				rt_publishers_.AddPublisher(*ros_nh_ptr_,"joints_cmd_torques",Ndof_,&joints_torques_cmd_);
-				
-				/*pos_status_pub_ = new tools::RealTimePublisher(*ros_nh_ptr_,"joints_status_pos",Ndof_);
-				vel_status_pub_ = new tools::RealTimePublisher(*ros_nh_ptr_,"joints_status_vel",Ndof_);
-				acc_status_pub_ = new tools::RealTimePublisher(*ros_nh_ptr_,"joints_status_acc",Ndof_);
-				torques_status_pub_ = new tools::RealTimePublisher(*ros_nh_ptr_,"joints_status_torques",Ndof_);
-				pos_cmd_pub_ = new tools::RealTimePublisher(*ros_nh_ptr_,"joints_cmd_pos",Ndof_);
-				torques_cmd_pub_ = new tools::RealTimePublisher(*ros_nh_ptr_,"joints_cmd_torques",Ndof_);*/
 			}
 			else
 			{
