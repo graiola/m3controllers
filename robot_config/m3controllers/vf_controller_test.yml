@@ -1,0 +1,7 @@
+name: vf_controller_test
+shm_id: M3VF
+humanoid: m3humanoid_right_left_arm_head_mr12
+chain: RIGHT_ARM
+joints_mask: 1,1,1,1,1,1,1
+controller_type: pos
+kin_name: cart_controller_test
