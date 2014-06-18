@@ -389,7 +389,7 @@ class M3Controller : public m3rt::M3CompShm
 		/** Number of controlled degree of freedom */
 		int Ndof_controlled_;
 		/** Loops counter*/
-		int loop_cnt_;
+		long long loop_cnt_;
 		/** Controlled chain */
 		M3Chain chain_;
 		/** Mask to select the controlled joints */

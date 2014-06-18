@@ -20,6 +20,9 @@
 #ifdef DMP_CONTROLLER_NAME
 	#include "m3controllers/dmp_controller/dmp_controller.h"
 #endif
+#ifdef VF_CONTROLLER_NAME
+	#include "m3controllers/vf_controller/vf_controller.h"
+#endif
 
 ///////////////////////////////////////////////////////
 extern "C" 
@@ -51,6 +54,11 @@ m3rt::M3Component* create_dmp_controller(){return new m3controllers::DmpControll
 void destroy_dmp_controller(m3rt::M3Component* c) {delete c;}
 #endif
 
+#ifdef VF_CONTROLLER_NAME
+m3rt::M3Component* create_vf_controller(){return new m3controllers::VfController;}
+void destroy_vf_controller(m3rt::M3Component* c) {delete c;}
+#endif
+
 ///////////////////////////////////////////////////////
 class M3FactoryProxy 
 { 
@@ -76,6 +84,10 @@ public:
 	#ifdef DMP_CONTROLLER_NAME
 		m3rt::creator_factory[DMP_CONTROLLER_NAME] = create_dmp_controller;
 		m3rt::destroyer_factory[DMP_CONTROLLER_NAME] = destroy_dmp_controller;
+	#endif
+	#ifdef VF_CONTROLLER_NAME
+		m3rt::creator_factory[VF_CONTROLLER_NAME] = create_vf_controller;
+		m3rt::destroyer_factory[VF_CONTROLLER_NAME] = destroy_vf_controller;
 	#endif
 	}
 };

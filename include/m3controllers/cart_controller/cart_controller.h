@@ -131,6 +131,11 @@ class CartController : public M3Controller
 			component_communication_ = true;
 		}
 		
+		kdl_kinematics::KDLKinematics* GetKinSolver()
+		{
+			return kin_;
+		}
+		
 	protected:
 		bool ReadConfig(const char* filename);
 		void Startup();

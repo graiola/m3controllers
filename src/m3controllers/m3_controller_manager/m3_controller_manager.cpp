@@ -34,9 +34,9 @@ bool getSemAddr(const char* sem_name,SEM* &sem){
 
 bool getShmAddr(const char* shm_name,M3Sds* &sds){
 	if ((sds = (M3Sds*)rt_shm_alloc(nam2num(shm_name),sizeof(M3Sds),USE_VMALLOC)))
-				return true;
-			else
-				return false;
+		return true;
+	else
+		return false;
 }
 
 class ShmMonitor
@@ -104,6 +104,7 @@ bool interface()
 	cout<<"2): torque_controller"<<endl;
 	cout<<"3): cart_controller"<<endl;
 	cout<<"4): joints_controller"<<endl;
+	cout<<"5): vf_controller"<<endl;
 	cout<<"selection: ";
 	cin>>controller_id;
 	if(controller_id == 1)
@@ -124,6 +125,11 @@ bool interface()
 	else if(controller_id == 4)
 	{
 		controller_acronym = "JNT";
+		return true;
+	}
+	else if(controller_id == 5)
+	{
+		controller_acronym = "VF";
 		return true;
 	}
 	else
