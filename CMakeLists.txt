@@ -3,6 +3,10 @@
 cmake_minimum_required(VERSION 2.8)
 
 ###############################################################################
+# Project name is not mandatory, but you should use it
+project(m3controllers)
+
+###############################################################################
 # Set the PROJECT_ROOT variable
 set(PROJECT_ROOT ${PROJECT_SOURCE_DIR})
 

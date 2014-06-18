@@ -1,6 +1,6 @@
 ###############################################################################
 # Project name is not mandatory, but you should use it
-project(m3controllers)
+# project(m3controllers)
 
 ###############################################################################
 # General settings
