@@ -131,9 +131,9 @@ class CartController : public M3Controller
 			component_communication_ = true;
 		}
 		
-		kdl_kinematics::KDLKinematics* GetKinSolver()
+		kdl_kinematics::KDLKinematics GetKinSolver()
 		{
-			return kin_;
+			return *kin_;
 		}
 		
 	protected:
