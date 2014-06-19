@@ -9,7 +9,7 @@ using namespace tools;
 using namespace kdl_kinematics;
 using namespace Eigen;
 
-bool VfController::LinkDependentComponents()
+/*bool VfController::LinkDependentComponents()
 {
 	
 	if(!M3Controller::LinkDependentComponents())
@@ -22,22 +22,22 @@ bool VfController::LinkDependentComponents()
 	}
 	
 	return true;
-}
+}*/
 
 void VfController::Startup()
 {	
 	
 	M3Controller::Startup();
 	
-	if (kin_component_ == NULL)
+	/*if (kin_component_ == NULL)
 		SetStateError();
 	else
-		SetStateSafeOp();
+		SetStateSafeOp();*/
 		
 	// Resize
-	cart_pos_status_.resize(6); // NOTE always six
-	cart_pos_cmd_.resize(6); // NOTE always six
-	cart_vel_status_.resize(6); // NOTE always six
+	cart_pos_status_.resize(3);
+	cart_pos_cmd_.resize(3);
+	cart_vel_status_.resize(3);
 	// Clear
 	cart_pos_status_.fill(0.0);
 	cart_pos_cmd_.fill(0.0);
@@ -46,9 +46,10 @@ void VfController::Startup()
 	//kin_component_->EnableInternalCommunication(); // Enable the communication with it.
 	
 	// Controller sample time
-	dt_ = 1/static_cast<double>(RT_TASK_FREQUENCY);
+	//dt_ = 1/static_cast<double>(RT_TASK_FREQUENCY);
 	
-	kin_solver_ptr_ = new KDLKinematics(kin_component_->GetKinSolver());
+	// Set the kinematic mask
+	kin_->setMask(cart_mask_str_);
 	
 	// User velocity, vf and joint vel commands
 	v_.resize(3);
@@ -60,8 +61,8 @@ void VfController::Startup()
 	
 	// Define the virtual fixture
 	c_ = 1;
-	Pi_ << 0.0, 0.0, 0.5;
-	Pf_ << 0.4, 0.0, 0.5;
+	Pi_ << 0.0, 0.0, 0.0;
+	Pf_ << 0.0, 0.0, 0.5;
 	T_ = (Pf_-Pi_)/(Pf_-Pi_).norm();
 	D_ = T_*(T_.transpose()*T_).inverse() * T_.transpose();
 	I_ = MatrixXd::Identity(3,3);
@@ -98,7 +99,44 @@ bool VfController::ReadConfig(const char* cfg_filename)
 	if (!M3Controller::ReadConfig(cfg_filename))
 		return false;
 	
-	doc["kin_name"] >> kin_component_name_;
+	const YAML::Node& ik = doc["ik"];
+	double damp_max, epsilon;
+	ik["cart_mask"] >> cart_mask_str_;
+	ik["damp_max"] >> damp_max;
+	ik["epsilon"] >> epsilon;
+	
+	Eigen::MatrixXd gains = MatrixXd::Zero(6,6);
+	ik["gain_x"] >> gains(0,0);
+	ik["gain_y"] >> gains(1,1);
+	ik["gain_z"] >> gains(2,2);
+	ik["gain_roll"] >> gains(3,3);
+	ik["gain_pitch"] >> gains(4,4);
+	ik["gain_yaw"] >> gains(5,5);
+	
+	// Sample time
+	double dt = 1/static_cast<double>(RT_TASK_FREQUENCY);
+	
+	std::string root_name = "T0"; //FIXME
+	std::string end_effector_name;
+	if(chain_name_ == "RIGHT_ARM")
+		end_effector_name = "palm_right";
+	else if(chain_name_ == "LEFT_ARM")
+		 end_effector_name = "palm_left";
+	else
+	{
+		M3_ERR("Only RIGHT_ARM and LEFT_ARM are supported");
+		return false;
+	}
+	
+	try
+	{
+		kin_ = new KDLClik (root_name,end_effector_name,damp_max,epsilon,gains,dt);
+	}
+	catch(const std::runtime_error& e)
+	{	
+		M3_ERR("Failed to create kdl kinematics: ",e.what());
+		return false;
+	}
 
 	return true;
 }
@@ -109,12 +147,16 @@ void VfController::StepStatus()
 	M3Controller::StepMotorsStatus(); // Read the joints status from motors
 
 	// Generate an user movement
-	//v_[0] = 3 * sin(2.0 * M_PI * static_cast<double>(loop_cnt_) / (1 * RT_TASK_FREQUENCY));
-	//v_[1] = 3 * sin(2.0 * M_PI * static_cast<double>(loop_cnt_) / (1 * RT_TASK_FREQUENCY));
-	//v_[2] = 3 * sin(2.0 * M_PI * static_cast<double>(loop_cnt_) / (1 * RT_TASK_FREQUENCY));
-	
-	kin_solver_ptr_->ComputeFkDot(joints_pos_status_,joints_vel_status_,v_);
+	//v_[0] = 0.5 * sin(2.0 * M_PI * static_cast<double>(loop_cnt_) / (1 * RT_TASK_FREQUENCY));
+	//v_[1] = 0.5 * sin(2.0 * M_PI * static_cast<double>(loop_cnt_) / (1 * RT_TASK_FREQUENCY));
+	//v_[2] = 0.5 * sin(2.0 * M_PI * static_cast<double>(loop_cnt_) / (1 * RT_TASK_FREQUENCY));
 
+	
+	kin_->clikStatusStep(joints_pos_status_,cart_pos_status_);
+	
+	kin_->ComputeFkDot(joints_pos_status_,joints_vel_status_,v_);
+
+	
 	//kin_component_->GetStatus(dmp_state_status_.segment(0,6));
 	
 /*#ifdef USE_ROS_RT_PUBLISHER
@@ -131,11 +173,14 @@ void VfController::StepCommand()
 	
 	vd_ = (c_*D_*v_ + (1-c_)*(I_-D_)*v_);
 	
-	//kin_solver_ptr_->ComputeIk(joints_pos_status_,vd_,joints_vel_cmd_);
+	cart_pos_cmd_ = vd_*dt_ + cart_pos_status_;
+	kin_->clikCommandStep(joints_pos_status_,cart_pos_cmd_,joints_pos_cmd_);
+	
+	//kin_->ComputeIk(joints_pos_status_,vd_,joints_vel_cmd_);
 	
 	//qdot_*dt_ + joints_pos_status_;
 	
-	M3Controller::StepMotorsCommand(joints_vel_cmd_*dt_ + joints_pos_status_);
+	M3Controller::StepMotorsCommand(joints_pos_cmd_);
 	
 	// Gooooo
 	//kin_component_->EnableController();

@@ -5,7 +5,7 @@
 #include "m3controllers/m3_controller_interface/m3_controller_interface.h"
 
 ////////// CART_CONTROLLER
-#include "m3controllers/cart_controller/cart_controller.h"
+//#include "m3controllers/cart_controller/cart_controller.h"
 
 ////////// Eigen
 #include <eigen3/Eigen/Core>
@@ -23,8 +23,8 @@ namespace m3controllers
 class VfController : public M3Controller
 {
 	public:
-		VfController():M3Controller(),kin_component_(NULL){}
-		~VfController(){if(kin_solver_ptr_!=NULL) delete kin_solver_ptr_;};
+		VfController():M3Controller(),kin_(NULL){}
+		~VfController(){if(kin_!=NULL) delete kin_;};
 		
 		/*google::protobuf::Message*  GetCommand(){return &vf_controller_status_;} //NOTE make abstract M3Component happy
 		google::protobuf::Message*  GetStatus(){return &vf_controller_cmd_;}
@@ -36,7 +36,7 @@ class VfController : public M3Controller
 		void Shutdown();
 		void StepStatus();
 		void StepCommand();
-		bool LinkDependentComponents();
+		//bool LinkDependentComponents();
 		
 		/*VfControllerStatus vf_controller_status_;
 		VfControllerCommand vf_controller_cmd_;
@@ -76,8 +76,12 @@ class VfController : public M3Controller
 */		
 	private:
 		enum {DEFAULT};
-		std::string kin_component_name_;
-		CartController* kin_component_;
+		//std::string kin_component_name_;
+		
+		std::string cart_mask_str_;
+		kdl_kinematics::KDLClik* kin_;
+		
+		//CartController* kin_component_;
 		
 		//int samples_to_execute_, samples_executed_;
 		
@@ -104,10 +108,7 @@ class VfController : public M3Controller
 		//Eigen::MatrixXd J_;
 		
 		double dt_;
-		
-		kdl_kinematics::KDLKinematics* kin_solver_ptr_;
-		
-		
+	
 		
 };
 

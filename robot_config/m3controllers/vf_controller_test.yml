@@ -4,4 +4,13 @@ humanoid: m3humanoid_right_left_arm_head_mr12
 chain: RIGHT_ARM
 joints_mask: 1,1,1,1,1,1,1
 controller_type: pos
-kin_name: cart_controller_test
+ik:
+  damp_max: 0.8
+  epsilon: 0.1
+  cart_mask: 1,1,1,0,0,0
+  gain_x: 50
+  gain_y: 50
+  gain_z: 50
+  gain_roll: 10
+  gain_pitch: 10
+  gain_yaw: 10
