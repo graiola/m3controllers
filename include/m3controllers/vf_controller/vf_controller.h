@@ -24,7 +24,7 @@ class VfController : public M3Controller
 {
 	public:
 		VfController():M3Controller(),kin_component_(NULL){}
-		//~VfController(){if(ros_nh_ptr_!=NULL) delete ros_nh_ptr_;};
+		~VfController(){if(kin_solver_ptr_!=NULL) delete kin_solver_ptr_;};
 		
 		/*google::protobuf::Message*  GetCommand(){return &vf_controller_status_;} //NOTE make abstract M3Component happy
 		google::protobuf::Message*  GetStatus(){return &vf_controller_cmd_;}

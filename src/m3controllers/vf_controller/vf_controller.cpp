@@ -48,7 +48,7 @@ void VfController::Startup()
 	// Controller sample time
 	dt_ = 1/static_cast<double>(RT_TASK_FREQUENCY);
 	
-	kin_solver_ptr_ = kin_component_->GetKinSolver();
+	kin_solver_ptr_ = new KDLKinematics(kin_component_->GetKinSolver());
 	
 	// User velocity, vf and joint vel commands
 	v_.resize(3);
@@ -131,7 +131,7 @@ void VfController::StepCommand()
 	
 	vd_ = (c_*D_*v_ + (1-c_)*(I_-D_)*v_);
 	
-	kin_solver_ptr_->ComputeIk(joints_pos_status_,vd_,joints_vel_cmd_);
+	//kin_solver_ptr_->ComputeIk(joints_pos_status_,vd_,joints_vel_cmd_);
 	
 	//qdot_*dt_ + joints_pos_status_;
 	
