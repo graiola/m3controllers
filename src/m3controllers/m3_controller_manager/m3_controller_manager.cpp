@@ -105,6 +105,7 @@ bool interface()
 	cout<<"3): cart_controller"<<endl;
 	cout<<"4): joints_controller"<<endl;
 	cout<<"5): vf_controller"<<endl;
+	cout<<"6): vf_force_controller"<<endl;
 	cout<<"selection: ";
 	cin>>controller_id;
 	if(controller_id == 1)
@@ -130,6 +131,11 @@ bool interface()
 	else if(controller_id == 5)
 	{
 		controller_acronym = "VF";
+		return true;
+	}
+	else if(controller_id == 6)
+	{
+		controller_acronym = "VFF";
 		return true;
 	}
 	else
