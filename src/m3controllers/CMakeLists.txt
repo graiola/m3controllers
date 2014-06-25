@@ -74,6 +74,7 @@ if(kdl_kinematics_FOUND)
         add_subdirectory(cart_controller)
         add_subdirectory(dmp_controller) #NOTE no way to check if dmpboo is installed...
         add_subdirectory(vf_controller)
+        add_subdirectory(vf_force_controller)
 endif()
 
 ###############################################################################
