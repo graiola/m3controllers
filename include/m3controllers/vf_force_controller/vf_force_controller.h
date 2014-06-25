@@ -11,8 +11,8 @@
 #include <eigen3/Eigen/Core>
 
 ////////// Google protobuff
-#include <google/protobuf/message.h>
-#include "m3controllers/vf_controller/vf_controller.pb.h"
+//#include <google/protobuf/message.h>
+//#include "m3controllers/vf_controller/vf_controller.pb.h"
 
 ////////// KDL_KINEMATICS
 #include <kdl_kinematics/kdl_kinematics.h>
@@ -24,7 +24,7 @@ class VfForceController : public M3Controller
 {
 	public:
 		VfForceController():M3Controller(),kin_(NULL){}
-		~VfForceController(){if(kin_!=NULL) delete kin_;};
+		~VfForceController(){if(kin_!=NULL) delete kin_;}
 		
 	protected:
 		bool ReadConfig(const char* filename);

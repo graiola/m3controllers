@@ -1,5 +1,5 @@
-name: vf_controller_test
-shm_id: M3VF
+name: vf_force_controller_test
+shm_id: M3VFF
 humanoid: m3humanoid_right_left_arm_head_mr12
 chain: RIGHT_ARM
 joints_mask: 1,1,1,1,1,1,1
