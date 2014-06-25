@@ -8,6 +8,7 @@ rt_components:
 #    sin_controller_test: sin_controller
 #    dmp_controller_test: dmp_controller
     vf_controller_test: vf_controller
+    vf_force_controller_test: vf_force_controller
     cart_controller_test: cart_controller
 #    m3dynamatics_right_arm_test: m3dynamatics
 #    torque_controller_test: torque_controller

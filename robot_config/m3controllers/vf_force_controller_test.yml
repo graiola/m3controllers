@@ -1,0 +1,11 @@
+name: vf_controller_test
+shm_id: M3VF
+humanoid: m3humanoid_right_left_arm_head_mr12
+chain: RIGHT_ARM
+joints_mask: 1,1,1,1,1,1,1
+controller_type: torques
+dynamic: m3dynamatics_right_arm_test
+ik:
+  damp_max: 0.8
+  epsilon: 0.1
+  cart_mask: 1,1,1,0,0,0
