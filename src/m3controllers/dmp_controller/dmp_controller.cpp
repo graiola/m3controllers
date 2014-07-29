@@ -91,7 +91,7 @@ void DmpController::Startup()
 		SetStateSafeOp();
 		
 	// Resize
-	cart_pos_status_.resize(6); // NOTE always six
+    cart_pos_status_.resize(6); // NOTE always six
 	cart_pos_cmd_.resize(6); // NOTE always six
 	cart_vel_status_.resize(6); // NOTE always six
 	// Clear
@@ -133,6 +133,7 @@ void DmpController::Startup()
 	
 	// Resize the dmp's state vectors
 	dmp_state_size_ = dmp_ptr_->dim();
+
 	dmp_state_status_.resize(dmp_state_size_);
 	dmp_state_status_dot_.resize(dmp_state_size_);
 	dmp_state_command_.resize(dmp_state_size_);
@@ -191,8 +192,9 @@ bool DmpController::ReadConfig(const char* cfg_filename)
 
 void DmpController::StepStatus()
 {
-	kin_component_->GetStatus(dmp_state_status_.segment(0,6));
-	dmp_ptr_->integrateStep(dt_,dmp_state_status_,dmp_state_command_,dmp_state_command_dot_);
+    kin_component_->GetStatus(cart_pos_status_);
+    dmp_state_status_.segment(0,dmp_ptr_->dim_orig()) = cart_pos_status_.segment(0,3); // FIXME, replace 3 with cart size
+    dmp_ptr_->integrateStep(dt_,dmp_state_status_,dmp_state_command_,dmp_state_command_dot_);
 	dmp_trajectory_ = dmp_state_command_.segment(0,3);
 #ifdef USE_ROS_RT_PUBLISHER
 	rt_publishers_.PublishAll();
@@ -203,7 +205,8 @@ void DmpController::StepCommand()
 {	
 	// Gooooo
 	kin_component_->EnableController(); // FIXME it's a bit stupid to call it every loop...
-	kin_component_->SetCommand(dmp_state_command_.segment(0,6));
+    cart_pos_cmd_.segment(0,3) = dmp_state_command_.segment(0,dmp_ptr_->dim_orig()); // FIXME, replace 3 with cart size
+    kin_component_->SetCommand(cart_pos_cmd_);
 	// Update the gating system state
 	dmp_state_status_ =  dmp_state_command_;
 }
