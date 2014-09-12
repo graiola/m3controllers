@@ -26,6 +26,9 @@
 
 namespace m3controllers
 {
+  
+	using namespace m3rt; //FIXME We need it because in m3rt namespace is defined a yaml >> operator wrapper that we need
+	
 	typedef struct
 	{
 		bool enable;
