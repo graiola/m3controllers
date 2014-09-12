@@ -22,6 +22,8 @@
 ////////// Eigen3
 #include <eigen3/Eigen/Core>
 
+#define USE_ROS_RT_PUBLISHER //HACK
+
 #ifdef USE_ROS_RT_PUBLISHER
 ////////// ROS
 #include <ros/ros.h>
@@ -34,7 +36,7 @@
 ////////// Some defs
 #define mm2m(a)	(mReal((a))/1000) //millimeters to meters
 #define m2mm(a)	(mReal((a))*1000) //meters to millimeters
-#define M3_CONTROLLERS_LOG "/home/meka/mekabot/m3ens/log_files/m3_controllers/" //FIXME
+#define M3_CONTROLLERS_LOG "/home/gennaro/log_files/m3controllers/" //FIXME
 
 namespace tools {
 	/*
