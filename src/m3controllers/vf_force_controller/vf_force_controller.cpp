@@ -155,7 +155,8 @@ void VfForceController::StepCommand()
 	//joints_torques_cmd_ = jacobian_.transpose() * fd_;
 	
 	
-	joints_torques_cmd_[0] = 0.1;
+	joints_torques_cmd_[0] = 0.8;
+	joints_torques_cmd_[3] = 0.8;
 
 
 	M3Controller::StepMotorsCommand(joints_torques_cmd_);
