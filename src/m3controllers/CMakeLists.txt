@@ -59,6 +59,21 @@ set(LIBRARIES ${LIBRARIES} ${catkin_LIBRARIES})
 set(INCLUDE_DIRS ${INCLUDE_DIRS} ${catkin_INCLUDE_DIRS})
 
 ###############################################################################
+# Find Yamlcpp
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(YAMLCPP REQUIRED yaml-cpp)
+if(NOT ${YAMLCPP_VERSION} VERSION_LESS "0.5")
+find_package(YamlCpp  REQUIRED)
+set_property(
+   DIRECTORY
+   PROPERTY COMPILE_DEFINITIONS YAMLCPP_05
+   )
+endif(NOT ${YAMLCPP_VERSION} VERSION_LESS "0.5")
+set(LIBRARIES ${LIBRARIES} ${YAMLCPP_LIBRARIES})
+set(INCLUDE_DIRS ${INCLUDE_DIRS} ${YAMLCPP_INCLUDE_DIR})
+#link_directories(${YAMLCPP_LIBRARY_DIRS})
+
+###############################################################################
 # Include directories
 include_directories(${INCLUDE_DIRS})
 
@@ -72,8 +87,8 @@ add_subdirectory(joints_controller)
 #add_subdirectory(vel_controller)
 if(kdl_kinematics_FOUND)
         add_subdirectory(cart_controller)
-        add_subdirectory(dmp_controller) #NOTE no way to check if dmpboo is installed...
-        add_subdirectory(vf_controller)
+        #add_subdirectory(dmp_controller) #NOTE no way to check if dmpboo is installed...
+        #add_subdirectory(vf_controller)
         add_subdirectory(vf_force_controller)
 endif()
 
