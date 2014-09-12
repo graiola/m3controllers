@@ -6,7 +6,7 @@
 # General settings
 # Some settings related to building/installing libraries and header files
 # Set this to STATIC if you want to build static libraries instead.
-set(SHARED_OR_STATIC "STATIC")
+set(SHARED_OR_STATIC "SHARED")
 # Some flags for CXX
 set(CMAKE_CXX_FLAGS "-Wall -std=c++0x")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -ggdb")
@@ -15,7 +15,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "-O0 -ggdb")
 ###############################################################################
 # Find RTAI
 find_package(RTAI REQUIRED)
-set(LIBRARIES ${LIBRARIES} ${RTAI_LIBRARIES})
+set(LIBRARIES ${LIBRARIES} ${RTAI_LIBRARY})
 set(INCLUDE_DIRS ${INCLUDE_DIRS} ${RTAI_INCLUDE_DIR})
 
 ###############################################################################
