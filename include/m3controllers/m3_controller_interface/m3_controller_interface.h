@@ -235,12 +235,12 @@ class M3Controller : public m3rt::M3CompShm
 				return false;
 			}
 			
-			try
+			if(YAML::Node parameter = doc["sec_to_dump"])
 			{
 				doc["sec_to_dump"] >> file_length_sec_;
 				
 			} 
-			catch(YAML::TypedKeyNotFound<std::string> e)
+			else
 			{	
 				file_length_sec_ = 0;
 			}
