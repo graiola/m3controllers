@@ -40,3 +40,9 @@ include_directories(
 ###############################################################################
 # Add the main project src dir that contains all the others
 add_subdirectory(src/m3controllers)
+
+###############################################################################
+# Generate the setup.bash
+configure_file(setup.bash.in ${PROJECT_ROOT}/setup.bash)
+# Generate the robot config file (the lib path is hardcoded) 
+configure_file(${PROJECT_ROOT}/robot_config/m3_config.yml.in ${PROJECT_ROOT}/robot_config/m3_config.yml)
