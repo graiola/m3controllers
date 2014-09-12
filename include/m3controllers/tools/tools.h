@@ -37,7 +37,7 @@
 #define M3_CONTROLLERS_LOG "/home/meka/mekabot/m3ens/log_files/m3_controllers/" //FIXME
 
 namespace tools {
-	
+	/*
 inline bool GenerateDocFromCfg(const char* cfg_filename, YAML::Node& doc)
 {       std::string path;
 	std::string file_name(cfg_filename);
@@ -57,7 +57,7 @@ inline bool GenerateDocFromCfg(const char* cfg_filename, YAML::Node& doc)
 	
 	return true;
 }
-
+*/
 template<typename value_t>
 struct JointLimits{
 	value_t min_q;
