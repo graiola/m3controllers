@@ -37,13 +37,13 @@ bool JointsController::ReadConfig(const char* cfg_filename)
 	
 	GetYamlDoc(cfg_filename, doc);
 	
-	if(doc.FindValue("joints_trj"))
+	if(YAML::Node parameter = doc["joints_trj"])
 	{
 		doc["joints_trj"] >> cmd_input_file_name_;
 		M3_INFO("Using an input file for the component %s\n",GetName().c_str());
 		reference_source_ = TRJ_REF;
 	}
-	else if(doc.FindValue("joints_position"))
+	else if(YAML::Node parameter = doc["joints_position"])
 	{
 		doc["joints_position"] >> joints_position_;
 		M3_INFO("Using a constant pose for the component %s\n",GetName().c_str());
