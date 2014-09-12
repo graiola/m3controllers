@@ -64,19 +64,19 @@ bool CartController::ReadConfig(const char* cfg_filename)
 	
 	GetYamlDoc(cfg_filename, doc);
 	
-	if(doc.FindValue("ef_trj"))
+	if(YAML::Node parameter = doc["ef_trj"])
 	{
 		doc["ef_trj"] >> cmd_input_file_name_;
 		M3_INFO("Using an input file for the component %s\n",GetName().c_str());
 		reference_source_ = TRJ_REF;
 	}
-	else if(doc.FindValue("ef_pose"))
+	else if(YAML::Node parameter = doc["ef_pose"])
 	{
 		doc["ef_pose"] >> ef_pose_;
 		M3_INFO("Using a constant pose for the component %s\n",GetName().c_str());
 		reference_source_ = CONST_REF;
 	}
-	else if(doc.FindValue("ef_use_sds"))
+	else if(YAML::Node parameter = doc["ef_use_sds"])
 	{
 		doc["ef_use_sds"] >> enable_sds_; // FIXME useless???
 		M3_INFO("Using sds communication for the component %s\n",GetName().c_str());
