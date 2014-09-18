@@ -17,6 +17,8 @@
 ////////// KDL_KINEMATICS
 #include <kdl_kinematics/kdl_kinematics.h>
 
+typedef Eigen::JacobiSVD<Eigen::MatrixXd> svd_t;
+
 namespace m3controllers
 {
 	
@@ -95,9 +97,14 @@ class VfForceController : public M3Controller
 		Eigen::MatrixXd jacobian_;
 		Eigen::MatrixXd jacobian_t_pinv_;
 		
+                Eigen::VectorXd svd_vect_;
+                boost::shared_ptr<svd_t> svd_;
+                
 		cart_t f_;
 		cart_t fd_;
 		
+                double svd_curr, damp, damp_max, epsilon;
+                
 		double dt_;
 };
 

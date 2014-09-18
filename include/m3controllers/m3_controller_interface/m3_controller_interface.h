@@ -189,7 +189,7 @@ class M3Controller : public m3rt::M3CompShm
 				joints_pos_status_[i] = DEG2RAD(bot_->GetThetaDeg(chain_,i));
 				joints_vel_status_[i] = DEG2RAD(bot_->GetThetaDotDeg(chain_,i));		
 				joints_acc_status_[i] = DEG2RAD(bot_->GetThetaDotDotDeg(chain_,i));
-				joints_torques_status_[i] = mm2m(bot_->GetTorque_mNm(chain_,i));// mNm -> Nm
+				joints_torques_status_[i] = (bot_->GetTorque_mNm(chain_,i));// mNm -> Nm
 				joints_torques_dot_status_[i] = mm2m(bot_->GetTorqueDot_mNm(chain_,i));// mNm -> Nm
 			}
 			

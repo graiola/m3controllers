@@ -50,6 +50,9 @@ void VfForceController::Startup()
 	T_.resize(3,1);
 	Pi_.resize(3,1);
 	Pf_.resize(3,1);
+        
+        svd_vect_.resize(3);
+        svd_.reset(new svd_t(3,Ndof_));
 	
 	// Define the virtual fixture
 	c_ = 1;
@@ -60,7 +63,9 @@ void VfForceController::Startup()
 	I_ = MatrixXd::Identity(3,3);
 
 #ifdef USE_ROS_RT_PUBLISHER
-	if(ros::master::check()){
+	if(ros::master::check()){ 
+                rt_publishers_.AddPublisher(*ros_nh_ptr_,"user_torques",7,&user_torques_);      
+                rt_publishers_.AddPublisher(*ros_nh_ptr_,"id_torques",7,&torques_id_);
 		rt_publishers_.AddPublisher(*ros_nh_ptr_,"user_force",3,&f_);
 		rt_publishers_.AddPublisher(*ros_nh_ptr_,"desired_force",3,&fd_);
 	}
@@ -120,30 +125,37 @@ void VfForceController::StepStatus()
 	M3Controller::StepMotorsStatus(); // Read the joints status from motors
 
 	for(int i=0;i<Ndof_;i++)
-	  torques_id_[i] = dyn_component_->GetG(i)/1000;
+	  torques_id_[i] = - dyn_component_->GetG(i) /1000;
+        
+	user_torques_ = joints_torques_status_ - torques_id_;
 
-	user_torques_ = joints_torques_status_ + torques_id_;
-
+        for(int i=0;i<Ndof_;i++)
+            user_torques_[i] = user_torques_[i];
+        
 	kin_->ComputeJac(joints_pos_status_,jacobian_);
 
 	// IK
-	Eigen::JacobiSVD<Eigen::MatrixXd> svd;
-	svd.compute(jacobian_.transpose(), ComputeThinU | ComputeThinV);
-	Eigen::VectorXd svd_vect = svd.singularValues();
-	double svd_curr, damp, damp_max, epsilon;
-	damp_max = 0.8;
+	//Eigen::JacobiSVD<Eigen::MatrixXd> svd;
+	svd_->compute(jacobian_.transpose(), ComputeThinU | ComputeThinV);
+	//Eigen::VectorXd svd_vect = svd.singularValues();
+        svd_vect_ = svd_->singularValues();
+	
+	damp_max = 0.0;
 	epsilon = 0.01;
-	for (int i = 0; i < svd_vect.size(); i++)
+	for (int i = 0; i < svd_vect_.size(); i++)
 	{
-		svd_curr = svd_vect[i];
-		damp = std::exp(-4/epsilon*svd_vect[i])*damp_max;
-		svd_vect[i] = svd_curr/(svd_curr*svd_curr+damp*damp);
+		svd_curr = svd_vect_[i];
+		damp = std::exp(-4/epsilon*svd_vect_[i])*damp_max;
+		svd_vect_[i] = svd_curr/(svd_curr*svd_curr+damp*damp);
 	}
-	jacobian_t_pinv_ = svd.matrixV() * svd_vect.asDiagonal() * svd.matrixU().transpose();
+	jacobian_t_pinv_ = svd_->matrixV() * svd_vect_.asDiagonal() * svd_->matrixU().transpose();
 	// END IK
 
 	f_ = jacobian_t_pinv_ * user_torques_;
 	
+        //for(int i=0;i<3;i++)
+         //   f_[i] = f_[i];
+        
 	M3Controller::StepStatus(); // Update the status sds
 }
 
