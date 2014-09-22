@@ -17,6 +17,9 @@
 ////////// KDL_KINEMATICS
 #include <kdl_kinematics/kdl_kinematics.h>
 
+////////// VIRTUAL_MECHANISM
+#include <virtual_mechanism/virtual_mechanism.h>
+
 typedef Eigen::JacobiSVD<Eigen::MatrixXd> svd_t;
 
 namespace m3controllers
@@ -78,34 +81,43 @@ class VfForceController : public M3Controller
 		std::string dyn_component_name_, cart_mask_str_;
 		m3::M3Dynamatics* dyn_component_;
 
-		kdl_kinematics::KDLKinematics* kin_;
+		virtual_mechanism::VirtualMechanism* vm_;
+		
+		kdl_kinematics::KDLClik* kin_;
 		
 		joints_t torques_id_;
 		joints_t user_torques_;
 
-		/*cart_t cart_pos_status_;
+		cart_t cart_pos_status_;
 		cart_t cart_pos_cmd_;
-		cart_t cart_vel_status_;*/
+		cart_t cart_vel_status_;
+		
+		cart_t vm_state_;
+		cart_t vm_state_dot_;
 		
 		double c_;
 		//long long loop_cnt_;
-		Eigen::MatrixXd T_;
-		Eigen::MatrixXd Pi_;
-		Eigen::MatrixXd Pf_;
-		Eigen::MatrixXd D_;
-		Eigen::MatrixXd I_;
+// 		Eigen::MatrixXd T_;
+// 		Eigen::MatrixXd Pi_;
+// 		Eigen::MatrixXd Pf_;
+// 		Eigen::MatrixXd D_;
+// 		Eigen::MatrixXd I_;
 		Eigen::MatrixXd jacobian_;
+		Eigen::MatrixXd jacobian_t_;
 		Eigen::MatrixXd jacobian_t_pinv_;
+		
+		int cart_size_;
 		
                 Eigen::VectorXd svd_vect_;
                 boost::shared_ptr<svd_t> svd_;
                 
-		cart_t f_;
-		cart_t fd_;
+		cart_t f_user_;
+		cart_t f_vm_;
+		cart_t f_cmd_;
 		
                 double svd_curr, damp, damp_max, epsilon;
-                
 		double dt_;
+		double B_, K_;
 };
 
 

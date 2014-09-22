@@ -51,7 +51,7 @@ set(INCLUDE_DIRS ${INCLUDE_DIRS} ${Boost_INCLUDE_DIR})
 
 ###############################################################################
 # Find Catkin components (optionals)
-find_package(catkin COMPONENTS kdl_kinematics sensor_msgs geometry_msgs nav_msgs realtime_tools)
+find_package(catkin COMPONENTS kdl_kinematics virtual_mechanism sensor_msgs geometry_msgs nav_msgs realtime_tools)
 if(realtime_tools_FOUND AND sensor_msgs_FOUND)
    add_definitions(-DUSE_ROS_RT_PUBLISHER)
 endif()
@@ -89,7 +89,9 @@ if(kdl_kinematics_FOUND)
         add_subdirectory(cart_controller)
         #add_subdirectory(dmp_controller) #NOTE no way to check if dmpboo is installed...
         #add_subdirectory(vf_controller)
-        add_subdirectory(vf_force_controller)
+        if(virtual_mechanism_FOUND)
+	     add_subdirectory(vf_force_controller)
+	endif()
 endif()
 
 ###############################################################################
