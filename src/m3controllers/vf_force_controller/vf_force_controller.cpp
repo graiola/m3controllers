@@ -209,7 +209,7 @@ void VfForceController::StepCommand()
 {	
 	M3Controller::StepCommand(); // Update the command sds
 	
-	f_cmd_ = f_vm_ + f_user_;
+	f_cmd_ = f_vm_ - f_user_;
 	
 	joints_torques_cmd_ = jacobian_t_ * f_cmd_;
 	
@@ -218,8 +218,6 @@ void VfForceController::StepCommand()
 	
 	// Compute IK
 	//kin_->clikCommandStep(joints_pos_status_,cart_pos_cmd_,joints_pos_cmd_);
-	
-	
 	
 	
 	//joints_torques_cmd_[0] = 0.8;
