@@ -87,7 +87,11 @@ class VfForceController : public M3Controller
 		
 		joints_t torques_id_;
 		joints_t user_torques_;
-
+                joints_t torques_cmd_;
+                joints_t torques_status_;
+                joints_t position_status_;
+                joints_t velocity_status_;
+                
 		cart_t cart_pos_status_;
 		cart_t cart_pos_cmd_;
 		cart_t cart_vel_status_;
@@ -104,6 +108,7 @@ class VfForceController : public M3Controller
 // 		Eigen::MatrixXd I_;
 		Eigen::MatrixXd jacobian_;
 		Eigen::MatrixXd jacobian_t_;
+                Eigen::MatrixXd jacobian_t_reduced_;
 		Eigen::MatrixXd jacobian_t_pinv_;
 		
 		int cart_size_;
