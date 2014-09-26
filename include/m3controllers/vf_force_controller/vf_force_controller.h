@@ -78,7 +78,10 @@ class VfForceController : public M3Controller
 	private:
 		enum {DEFAULT};
 
-		std::string dyn_component_name_, cart_mask_str_;
+		tools::RealTimePublishers<tools::RealTimePublisherPath> rt_publishers_path_;
+		tools::RealTimePublishers<tools::RealTimePublisherWrench> rt_publishers_wrench_;
+		
+		std::string dyn_component_name_, cart_mask_str_, end_effector_name_;
 		m3::M3Dynamatics* dyn_component_;
 
 		virtual_mechanism::VirtualMechanism* vm_;

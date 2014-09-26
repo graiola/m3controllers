@@ -15,6 +15,7 @@
 ////////// BOOST
 #include <boost/shared_ptr.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/smart_ptr/make_shared_array.hpp>
 
 ////////// M3RT
 #include <m3rt/base/toolbox.h>
@@ -29,6 +30,7 @@
 #include <ros/ros.h>
 #include <sensor_msgs/JointState.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/WrenchStamped.h>
 #include <nav_msgs/Path.h>
 #include <realtime_tools/realtime_publisher.h>
 #endif
@@ -233,6 +235,9 @@ class RealTimePublisherJoints
 			// Checks
 			assert(msg_size > 0);
 			assert(topic_name.size() > 0);
+			
+			topic_name_ = topic_name;
+			
 			assert(init_cond.size() >=  msg_size);
 			msg_size_ = msg_size;
 			
@@ -259,10 +264,13 @@ class RealTimePublisherJoints
 				pub_ptr_->unlockAndPublish();
 			}
 		}
+		
+		inline std::string getTopic(){return topic_name_;}
+		
 	private:
 		
 		typedef realtime_tools::RealtimePublisher<sensor_msgs::JointState> rt_publisher_t;
-		
+		std::string topic_name_;
 		int msg_size_;
 		boost::shared_ptr<rt_publisher_t > pub_ptr_;
 };
@@ -277,6 +285,8 @@ class RealTimePublisherPath
 			// Checks
 			assert(msg_size > 0);
 			assert(topic_name.size() > 0);
+			
+			topic_name_ = topic_name;
 			
 			assert(init_cond.size() >= 3);
 			prev_pose_.pose.position.x = init_cond[0];
@@ -312,12 +322,75 @@ class RealTimePublisherPath
 				pub_ptr_->unlockAndPublish();
 			}
 		}
+		
+		inline std::string getTopic(){return topic_name_;}
+		
 	private:
 		
 		typedef realtime_tools::RealtimePublisher<nav_msgs::Path> rt_publisher_t;
-		
+		std::string topic_name_;
 		//int msg_size_;
 		geometry_msgs::PoseStamped prev_pose_;
+		boost::shared_ptr<rt_publisher_t > pub_ptr_;
+};
+
+class RealTimePublisherWrench
+{
+	public:
+		
+		/** Initialize the real time publisher. */
+		RealTimePublisherWrench(const ros::NodeHandle& ros_nh, const std::string topic_name, std::string frame_id)
+		{
+			// Checks
+			//assert(msg_size > 0);
+			assert(topic_name.size() > 0);
+			
+			topic_name_ = topic_name;
+			
+			//assert(init_cond.size() >= 3);
+			pub_ptr_.reset(new rt_publisher_t(ros_nh,topic_name,10));
+			
+// 			pub_ptr_->msg_.wrench.force.x = init_cond[0];
+// 			pub_ptr_->msg_.wrench.force.y = init_cond[1];
+// 			pub_ptr_->msg_.wrench.force.z = init_cond[2];
+// 			pub_ptr_->msg_.wrench.torque.x = init_cond[3];
+// 			pub_ptr_->msg_.wrench.torque.y = init_cond[4];
+// 			pub_ptr_->msg_.wrench.torque.z = init_cond[5];
+			
+			
+			pub_ptr_->msg_.header.frame_id = frame_id;
+			
+		}
+		/** Publish the topic. */
+		inline void publish(const Eigen::Ref<const Eigen::VectorXd>& in)
+		{
+			if(pub_ptr_ && pub_ptr_->trylock())
+			{ 
+				pub_ptr_->msg_.header.stamp = ros::Time::now();
+
+				// Publish the force
+				pub_ptr_->msg_.wrench.force.x = in[0];
+				pub_ptr_->msg_.wrench.force.y = in[1];
+				pub_ptr_->msg_.wrench.force.z = in[2];
+				
+				// Publish the torques
+				if(in.size() > 3) 
+				{
+				  pub_ptr_->msg_.wrench.torque.x = in[3];
+				  pub_ptr_->msg_.wrench.torque.y = in[4];
+				  pub_ptr_->msg_.wrench.torque.z = in[5];
+				}
+				
+				pub_ptr_->unlockAndPublish();
+			}
+		}
+		
+		inline std::string getTopic(){return topic_name_;}
+		
+	private:
+		
+		typedef realtime_tools::RealtimePublisher<geometry_msgs::WrenchStamped> rt_publisher_t;
+		std::string topic_name_;
 		boost::shared_ptr<rt_publisher_t > pub_ptr_;
 };
 
@@ -331,17 +404,27 @@ class RealTimePublishers
 	public:
 
 		RealTimePublishers(){};
-		~RealTimePublishers()
+// 		~RealTimePublishers()
+// 		{
+// 			for(pubs_map_it_t iterator = map_.begin(); iterator != map_.end(); iterator++)
+// 				delete iterator->second.second;
+// 		}
+		
+		// Add a RealTimePublisher already created
+		void AddPublisher(boost::shared_ptr<RealTimePublisher_t> pub_ptr, Eigen::VectorXd* vector_ptr) 
 		{
-			for(pubs_map_it_t iterator = map_.begin(); iterator != map_.end(); iterator++)
-				delete iterator->second.second;
+			assert(pub_ptr!=false);
+			// Put it into the map with his friend
+			map_[pub_ptr->getTopic()] = std::make_pair(vector_ptr,pub_ptr);
 		}
+		
+		// Add a new fresh RealTimePublisher
 		void AddPublisher(const ros::NodeHandle& ros_nh, const std::string topic_name, int msg_size, Eigen::VectorXd* vector_ptr, Eigen::VectorXd init_cond = Eigen::VectorXd::Zero(50)) //HACK 50 because it's rare to have more then 50 dofs...
 		{
-			// Create a fresh RealTimePublisher
-			RealTimePublisher_t* pub_ptr = new RealTimePublisher_t(ros_nh,topic_name,msg_size,init_cond);
+			boost::shared_ptr<RealTimePublisher_t> pub_ptr = boost::make_shared<RealTimePublisher_t>(ros_nh,topic_name,msg_size,init_cond);
+			assert(pub_ptr!=false);
 			// Put it into the map with his friend
-			map_[topic_name] = std::make_pair(vector_ptr,pub_ptr);
+			map_[pub_ptr->getTopic()] = std::make_pair(vector_ptr,pub_ptr);
 		}
 		void PublishAll()
 		{
@@ -350,7 +433,8 @@ class RealTimePublishers
 		}
 	private:
 		
-		typedef std::map<std::string,std::pair<Eigen::VectorXd*,RealTimePublisher_t*> > pubs_map_t;
+		//typedef std::map<std::string,std::pair<Eigen::VectorXd*,RealTimePublisher_t*> > pubs_map_t;
+		typedef std::map<std::string,std::pair<Eigen::VectorXd*,boost::shared_ptr<RealTimePublisher_t> > > pubs_map_t;
 		typedef typename pubs_map_t::iterator pubs_map_it_t;
 		
 		pubs_map_t map_;

@@ -83,11 +83,24 @@ void VfForceController::Startup()
 
 #ifdef USE_ROS_RT_PUBLISHER
 	if(ros::master::check()){ 
-                rt_publishers_.AddPublisher(*ros_nh_ptr_,"user_torques",Ndof_controlled_,&user_torques_);      
-                rt_publishers_.AddPublisher(*ros_nh_ptr_,"id_torques",Ndof_controlled_,&torques_id_);
-		rt_publishers_.AddPublisher(*ros_nh_ptr_,"user_force",3,&f_user_);
-		rt_publishers_.AddPublisher(*ros_nh_ptr_,"vm_force",3,&f_vm_);
-		rt_publishers_.AddPublisher(*ros_nh_ptr_,"cmd_force",3,&f_cmd_);
+//              rt_publishers_.AddPublisher(*ros_nh_ptr_,"user_torques",Ndof_controlled_,&user_torques_);      
+//              rt_publishers_.AddPublisher(*ros_nh_ptr_,"id_torques",Ndof_controlled_,&torques_id_);
+// 		rt_publishers_.AddPublisher(*ros_nh_ptr_,"user_force",3,&f_user_);
+// 		rt_publishers_.AddPublisher(*ros_nh_ptr_,"vm_force",3,&f_vm_);
+// 		rt_publishers_.AddPublisher(*ros_nh_ptr_,"cmd_force",3,&f_cmd_);
+	  
+	  
+		boost::shared_ptr<RealTimePublisherWrench> tmp_ptr = NULL;
+		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"vm_force",end_effector_name_);
+		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_vm_);
+		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"user_force",end_effector_name_);
+		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_user_);
+		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"cmd_force",end_effector_name_);
+		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_cmd_);
+
+ 	        
+		rt_publishers_path_.AddPublisher(*ros_nh_ptr_,"robot_pos",cart_pos_status_.size(),&cart_pos_status_);
+		rt_publishers_path_.AddPublisher(*ros_nh_ptr_,"vm_pos",vm_state_.size(),&vm_state_);
 	}
 #endif
 
@@ -128,9 +141,9 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	std::string root_name = "T0"; //FIXME
 	std::string end_effector_name;
 	if(chain_name_ == "RIGHT_ARM")
-		end_effector_name = "palm_right"; //wrist_RIGHT
+		end_effector_name_ = "palm_right"; //wrist_RIGHT
 	else if(chain_name_ == "LEFT_ARM")
-		 end_effector_name = "palm_left";
+		 end_effector_name_ = "palm_left";
 	else
 	{
 		M3_ERR("Only RIGHT_ARM and LEFT_ARM are supported");
@@ -139,7 +152,7 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 
 	try
 	{
-		kin_ = new KDLClik (root_name,end_effector_name,damp_max,epsilon,gains,dt_);
+		kin_ = new KDLClik (root_name,end_effector_name_,damp_max,epsilon,gains,dt_);
 	}
 	catch(const std::runtime_error& e)
 	{
@@ -231,6 +244,9 @@ void VfForceController::StepStatus()
 	//std::cout<<"HELLO"<<std::endl;
 	//getchar();
 	
+	rt_publishers_path_.PublishAll();
+	rt_publishers_wrench_.PublishAll();
+	
 	M3Controller::StepStatus(); // Update the status sds
 }
 
@@ -249,7 +265,7 @@ void VfForceController::StepCommand()
         
         torques_cmd_ = jacobian_t_reduced_ * f_cmd_;
         
-        //joints_torques_cmd_.head(3) = torques_cmd_;
+        
         
         //torques_cmd_ = jacobian_t_ * f_cmd_;
 	
@@ -259,41 +275,43 @@ void VfForceController::StepCommand()
 	// Compute IK
 	//kin_->clikCommandStep(joints_pos_status_,cart_pos_cmd_,joints_pos_cmd_);
 	
-/*	
- 	torques_cmd_[0] = 0.8;
-        torques_cmd_[3] = 0.8;*/
+	
+	//torques_cmd_[0] = 0.8;
+        //torques_cmd_[3] = 0.8;
+	//joints_torques_cmd_.head(3) = torques_cmd_;
 
+// 	joints_torques_cmd_[0] = 0.8;
+//         joints_torques_cmd_[3] = 0.8;
+// 	M3Controller::StepMotorsCommand(joints_torques_cmd_);
+	
+	
 
-	//M3Controller::StepMotorsCommand(joints_torques_cmd_);
-	
-	
-	
 	
 	 // Motors on
-        if (m3_controller_interface_command_.enable())
-        {
-            bot_->SetMotorPowerOn();
-                 for(int i=0;i<4;i++)
-                 {
+         if (m3_controller_interface_command_.enable())
+         {
+             bot_->SetMotorPowerOn();
+                  for(int i=0;i<4;i++)
+                  {
+                   bot_->SetStiffness(chain_,i,1.0);
+                   bot_->SetSlewRateProportional(chain_,i,1.0);
+                   bot_->SetModeTorqueGc(chain_,i);
+                   bot_->SetTorque_mNm(chain_,i,m2mm(torques_cmd_[i]));
+                   
+ 
+                   
+                   
+                  }
+                  
+                  for(int i=4;i<Ndof_;i++)
+                  {
                      bot_->SetStiffness(chain_,i,1.0);
-                    bot_->SetSlewRateProportional(chain_,i,1.0);
-                  bot_->SetModeTorqueGc(chain_,i);
-                  bot_->SetTorque_mNm(chain_,i,m2mm(torques_cmd_[i]));
+                     bot_->SetSlewRateProportional(chain_,i,1.0);
+                     bot_->SetModeThetaGc(chain_,i);
+                     bot_->SetThetaDeg(chain_,i,0.0);
+                  }
                   
-
-                  
-                  
-                 }
-                 
-                 for(int i=4;i<Ndof_;i++)
-                 {
-                    bot_->SetStiffness(chain_,i,1.0);
-                    bot_->SetSlewRateProportional(chain_,i,1.0);
-                    bot_->SetModeThetaGc(chain_,i);
-                    bot_->SetThetaDeg(chain_,i,0.0);
-                 }
-                 
-        }
+         }
 
 
 	
