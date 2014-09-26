@@ -91,11 +91,11 @@ void VfForceController::Startup()
 	  
 	  
 		boost::shared_ptr<RealTimePublisherWrench> tmp_ptr = NULL;
-		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"vm_force",end_effector_name_);
+		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"vm_force",root_name_);
 		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_vm_);
-		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"user_force",end_effector_name_);
+		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"user_force",root_name_);
 		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_user_);
-		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"cmd_force",end_effector_name_);
+		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"cmd_force",root_name_);
 		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_cmd_);
 
  	        
@@ -138,8 +138,8 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	// Controller sample time
 	dt_ = 1/static_cast<double>(RT_TASK_FREQUENCY);
 	
-	std::string root_name = "T0"; //FIXME
-	std::string end_effector_name;
+	root_name_ = "T0"; //FIXME
+	
 	if(chain_name_ == "RIGHT_ARM")
 		end_effector_name_ = "palm_right"; //wrist_RIGHT
 	else if(chain_name_ == "LEFT_ARM")
@@ -152,7 +152,7 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 
 	try
 	{
-		kin_ = new KDLClik (root_name,end_effector_name_,damp_max,epsilon,gains,dt_);
+		kin_ = new KDLClik (root_name_,end_effector_name_,damp_max,epsilon,gains,dt_);
 	}
 	catch(const std::runtime_error& e)
 	{
@@ -220,7 +220,7 @@ void VfForceController::StepStatus()
 	jacobian_t_pinv_ = svd_->matrixV() * svd_vect_.asDiagonal() * svd_->matrixU().transpose();
 	// END IK
 
-	f_user_ = jacobian_t_pinv_ * user_torques_;
+	f_user_ = jacobian_t_pinv_ * (-1) * user_torques_;
 	
                 
 //         std::cout<<"***"<<std::endl;
@@ -254,7 +254,7 @@ void VfForceController::StepCommand()
 {	
 	M3Controller::StepCommand(); // Update the command sds
 	
-	f_cmd_ = f_vm_ - f_user_;
+	f_cmd_ = f_vm_ + f_user_;
 
          //for(int i=0;i<Ndof_controlled_;i++)
         jacobian_t_reduced_.row(0) = jacobian_t_.row(0);
@@ -276,42 +276,42 @@ void VfForceController::StepCommand()
 	//kin_->clikCommandStep(joints_pos_status_,cart_pos_cmd_,joints_pos_cmd_);
 	
 	
-	//torques_cmd_[0] = 0.8;
-        //torques_cmd_[3] = 0.8;
+	//joints_torques_cmd_[0] = 0.8;
+       // joints_torques_cmd_[3] = 0.8;
+        
 	//joints_torques_cmd_.head(3) = torques_cmd_;
-
 // 	joints_torques_cmd_[0] = 0.8;
 //         joints_torques_cmd_[3] = 0.8;
-// 	M3Controller::StepMotorsCommand(joints_torques_cmd_);
+ 	//M3Controller::StepMotorsCommand(joints_torques_cmd_);
 	
 	
 
 	
 	 // Motors on
-         if (m3_controller_interface_command_.enable())
-         {
-             bot_->SetMotorPowerOn();
-                  for(int i=0;i<4;i++)
-                  {
-                   bot_->SetStiffness(chain_,i,1.0);
-                   bot_->SetSlewRateProportional(chain_,i,1.0);
-                   bot_->SetModeTorqueGc(chain_,i);
-                   bot_->SetTorque_mNm(chain_,i,m2mm(torques_cmd_[i]));
+          if (m3_controller_interface_command_.enable())
+          {
+              bot_->SetMotorPowerOn();
+                   for(int i=0;i<4;i++)
+                   {
+                    bot_->SetStiffness(chain_,i,1.0);
+                    bot_->SetSlewRateProportional(chain_,i,1.0);
+                    bot_->SetModeTorqueGc(chain_,i);
+                    bot_->SetTorque_mNm(chain_,i,m2mm(torques_cmd_[i]));
+                    
+  
+                    
+                    
+                   }
                    
- 
+                   for(int i=4;i<Ndof_;i++)
+                   {
+                      bot_->SetStiffness(chain_,i,1.0);
+                      bot_->SetSlewRateProportional(chain_,i,1.0);
+                      bot_->SetModeThetaGc(chain_,i);
+                      bot_->SetThetaDeg(chain_,i,0.0);
+                   }
                    
-                   
-                  }
-                  
-                  for(int i=4;i<Ndof_;i++)
-                  {
-                     bot_->SetStiffness(chain_,i,1.0);
-                     bot_->SetSlewRateProportional(chain_,i,1.0);
-                     bot_->SetModeThetaGc(chain_,i);
-                     bot_->SetThetaDeg(chain_,i,0.0);
-                  }
-                  
-         }
+          }
 
 
 	
