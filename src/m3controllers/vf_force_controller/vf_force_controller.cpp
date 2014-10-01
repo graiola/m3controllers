@@ -8,7 +8,8 @@ using namespace m3;
 using namespace tools;
 using namespace kdl_kinematics;
 using namespace Eigen;
-using namespace virtual_mechanism;
+using namespace virtual_mechanism_gmr;
+using namespace DmpBbo;
 
 bool VfForceController::LinkDependentComponents()
 {
@@ -57,7 +58,7 @@ void VfForceController::Startup()
 	vm_state_.resize(cart_size_);
 	vm_state_dot_.resize(cart_size_);
 	
-	vm_ = new VirtualMechanism(cart_size_);
+	vm_ = new VirtualMechanismGmr(cart_size_,fa_shr_ptr_);
 	
 	// User velocity, vf and joint vel commands
 	jacobian_.resize(3,Ndof_controlled_);
@@ -121,6 +122,33 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 
 	doc["dynamic"] >> dyn_component_name_;
 
+	// RETRAIN THE DATA FROM TXT FILE
+	std::string file_name;
+	doc["file_name"] >> file_name;
+	std::vector<std::vector<double> > data;
+	//std::string file_name = "/home/gennaro/catkin_ws/src/virtual-fixtures/virtual_mechanism/test/01_txyz.txt";
+	ReadTxtFile(file_name.c_str(),data);
+	
+	// CONVERT TO EIGEN MATRIX
+	MatrixXd inputs = VectorXd::LinSpaced(data.size(),0.0,1.0);;
+	MatrixXd targets(data.size(), data[0].size()-1); // NOTE Skip time
+	for (int i = 0; i < data.size(); i++)
+	  targets.row(i) = VectorXd::Map(&data[i][1],data[0].size()-1);
+	
+	// MAKE THE FUNCTION APPROXIMATORS
+	int input_dim = 1;
+	int n_basis_functions = 25;
+	
+	// GMR
+	MetaParametersGMR* meta_parameters_gmr = new MetaParametersGMR(input_dim,n_basis_functions);
+	FunctionApproximatorGMR* fa_ptr = new FunctionApproximatorGMR(meta_parameters_gmr);
+	
+	// TRAIN
+	fa_ptr->train(inputs,targets);
+	
+	// MAKE SHARED POINTER
+	fa_shr_ptr_.reset(fa_ptr);
+	
 	const YAML::Node& ik = doc["ik"];
 	double damp_max, epsilon;
 	//ik["cart_mask"] >> cart_mask_str_;
@@ -183,8 +211,6 @@ void VfForceController::StepStatus()
             }
             
  
-        
-            
 	user_torques_ = torques_status_ - torques_id_;
 
         //for(int i=0;i<Ndof_controlled_;i++)

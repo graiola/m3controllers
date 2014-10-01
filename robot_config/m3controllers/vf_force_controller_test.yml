@@ -5,6 +5,7 @@ chain: RIGHT_ARM
 joints_mask: 1,1,1,1,1,1,1
 controller_type: pos
 dynamic: m3dynamatics_right_arm_test
+file_name: /home/gennaro/workspace/m3controllers/data/01_txyz.txt
 ik:
   damp_max: 0.8
   epsilon: 0.1

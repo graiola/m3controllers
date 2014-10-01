@@ -8,7 +8,8 @@
 # Set this to STATIC if you want to build static libraries instead.
 set(SHARED_OR_STATIC "SHARED")
 # Some flags for CXX
-set(CMAKE_CXX_FLAGS "-Wall -std=c++0x")
+#set(CMAKE_CXX_FLAGS "-Wall -std=c++0x")
+set(CMAKE_CXX_FLAGS "-std=c++0x")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -ggdb")
 #set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 
@@ -72,6 +73,11 @@ endif(NOT ${YAMLCPP_VERSION} VERSION_LESS "0.5")
 set(LIBRARIES ${LIBRARIES} ${YAMLCPP_LIBRARIES})
 set(INCLUDE_DIRS ${INCLUDE_DIRS} ${YAMLCPP_INCLUDE_DIR})
 #link_directories(${YAMLCPP_LIBRARY_DIRS})
+
+###############################################################################
+# Find DMP
+set(DMP_LIBRARIES dmp dynamicalsystems functionapproximators)
+set(LIBRARIES ${LIBRARIES} ${DMP_LIBRARIES})
 
 ###############################################################################
 # Include directories

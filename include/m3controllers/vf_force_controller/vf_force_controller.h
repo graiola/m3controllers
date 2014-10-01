@@ -18,12 +18,18 @@
 #include <kdl_kinematics/kdl_kinematics.h>
 
 ////////// VIRTUAL_MECHANISM
-#include <virtual_mechanism/virtual_mechanism.h>
+#include <virtual_mechanism/virtual_mechanism_gmr.h>
+
+////////// Function Approximator
+#include <functionapproximators/FunctionApproximatorGMR.hpp>
+#include <functionapproximators/MetaParametersGMR.hpp>
+#include <functionapproximators/ModelParametersGMR.hpp>
 
 typedef Eigen::JacobiSVD<Eigen::MatrixXd> svd_t;
 
 namespace m3controllers
 {
+  typedef DmpBbo::FunctionApproximatorGMR fa_t;
 	
 class VfForceController : public M3Controller
 {
@@ -84,7 +90,8 @@ class VfForceController : public M3Controller
 		std::string dyn_component_name_, cart_mask_str_, end_effector_name_, root_name_;
 		m3::M3Dynamatics* dyn_component_;
 
-		virtual_mechanism::VirtualMechanism* vm_;
+		boost::shared_ptr<fa_t> fa_shr_ptr_;
+		virtual_mechanism_gmr::VirtualMechanismGmr* vm_;
 		
 		kdl_kinematics::KDLClik* kin_;
 		
