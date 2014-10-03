@@ -137,8 +137,8 @@ class VfForceController : public M3Controller
 		cart_t cart_pos_cmd_;
 		cart_t cart_vel_status_;
 		
-		cart_t vm_state_;
-		cart_t vm_state_dot_;
+		std::vector<cart_t> vm_state_;
+		std::vector<cart_t> vm_state_dot_;
 		
 		
 		//long long loop_cnt_;

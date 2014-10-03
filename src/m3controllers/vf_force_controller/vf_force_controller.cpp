@@ -60,14 +60,19 @@ void VfForceController::Startup()
 	cart_pos_status_.resize(cart_size_);
 	cart_pos_cmd_.resize(cart_size_);
 	cart_vel_status_.resize(cart_size_);
-	vm_state_.resize(cart_size_);
-	vm_state_dot_.resize(cart_size_);
 	
 	// Number of virtual mechanisms
 	vm_nb_ = fa_vector_.size();
 	
+	cart_t vect(cart_size_);
+	vect.fill(0.0);
 	for(int i=0; i<vm_nb_;i++)
+	{
 	  vm_vector_ .push_back(new VirtualMechanismGmr(cart_size_,fa_vector_[i]));
+	  vm_state_.push_back(vect);
+	  vm_state_dot_.push_back(vect);
+	}
+	
 	
 	// User velocity, vf and joint vel commands
 	jacobian_.resize(3,Ndof_controlled_);
@@ -118,8 +123,13 @@ void VfForceController::Startup()
 		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"cmd_force",root_name_);
 		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_cmd_);
 
-		rt_publishers_path_.AddPublisher(*ros_nh_ptr_,"robot_pos",cart_pos_status_.size(),&cart_pos_status_);
-		rt_publishers_path_.AddPublisher(*ros_nh_ptr_,"vm_pos",vm_state_.size(),&vm_state_);
+		
+ 		rt_publishers_path_.AddPublisher(*ros_nh_ptr_,"robot_pos",cart_pos_status_.size(),&cart_pos_status_);
+		for(int i=0; i<vm_nb_;i++)
+		{
+		  std::string topic_name = "vm_pos_" + std::to_string(i+1);
+		  rt_publishers_path_.AddPublisher(*ros_nh_ptr_,topic_name,vm_state_[i].size(),&vm_state_[i]);
+		}
 	}
 #endif
 
@@ -316,18 +326,16 @@ void VfForceController::StepStatus()
 	}
 
 	// Compute the force from the vms
+	f_vm_.fill(0.0);
 	for(int i=0; i<vm_nb_;i++)
 	{  
-	  
-	  vm_vector_[i]->getState(vm_state_);
-	  vm_vector_[i]->getStateDot(vm_state_dot_);
+	  vm_vector_[i]->getState(vm_state_[i]);
+	  vm_vector_[i]->getStateDot(vm_state_dot_[i]);
 	
 	  K_ = vm_vector_[i]->getK();
 	  B_ = vm_vector_[i]->getB();
 	  
-	  
-	  f_vm_ += scales_[i] * (K_ * (vm_state_ - cart_pos_status_) + B_ * (vm_state_dot_ - cart_vel_status_)); // Sum over all the vms
-	
+	  f_vm_ += scales_[i] * (K_ * (vm_state_[i] - cart_pos_status_) + B_ * (vm_state_dot_[i] - cart_vel_status_)); // Sum over all the vms
 	}
 	
 	rt_publishers_path_.PublishAll();
