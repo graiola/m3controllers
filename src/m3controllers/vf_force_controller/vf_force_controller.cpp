@@ -158,16 +158,39 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	
  	for(int i=0;i<file_names.size();i++)
 	{
- 	  //std::cout<<file_names[i]<<std::endl;
+	  // GMR
+	  //ModelParametersGMR* model_parameters_gmr = ModelParametersGMR::loadGMMFromMatrix(file_names[i]);
+	  //FunctionApproximatorGMR* fa_ptr = new FunctionApproximatorGMR(model_parameters_gmr);
+	  
+	  // MAKE SHARED POINTER
+	  //fa_shr_ptr_.reset(fa_ptr);
+	  //fa_vector_.push_back(fa_shr_ptr_);
+	  
+	  
+	  // Read from file the inputs / targets
+	  std::vector<std::vector<double> > data;
+	  ReadTxtFile(file_names[i].c_str(),data);
+	  // CONVERT TO EIGEN MATRIX
+	  MatrixXd inputs = VectorXd::LinSpaced(data.size(),0.0,1.0);
+	  MatrixXd targets(data.size(), data[0].size()-1); // NOTE Skip time
+	  for (int i = 0; i < data.size(); i++)
+	    targets.row(i) = VectorXd::Map(&data[i][1],data[0].size()-1);
+	  
+	  // MAKE THE FUNCTION APPROXIMATORS
+	  int input_dim = 1;
+	  int n_basis_functions = 25;
 	  
 	  // GMR
-	  ModelParametersGMR* model_parameters_gmr = ModelParametersGMR::loadGMMFromMatrix(file_names[i]);
-	  FunctionApproximatorGMR* fa_ptr = new FunctionApproximatorGMR(model_parameters_gmr);
+	  MetaParametersGMR* meta_parameters_gmr = new MetaParametersGMR(input_dim,n_basis_functions);
+	  FunctionApproximatorGMR* fa_ptr = new FunctionApproximatorGMR(meta_parameters_gmr);
+	  
+	  // TRAIN
+	  fa_ptr->train(inputs,targets);
 	  
 	  // MAKE SHARED POINTER
 	  fa_shr_ptr_.reset(fa_ptr);
 	  fa_vector_.push_back(fa_shr_ptr_);
-	
+	  
 	}
 	
 	// GMR
@@ -315,16 +338,15 @@ void VfForceController::StepStatus()
 	for(int i=0; i<vm_nb_;i++)
 	{
 	  vm_vector_[i]->Update(cart_pos_status_,cart_vel_status_,dt_);
-	  scales_[i] = 1/(vm_vector_[i]->getDistance(cart_pos_status_)+0.001); // NOTE 0.001 it's kind of eps to avoid division by 0
+	  scales_(i) = 1/(vm_vector_[i]->getDistance(cart_pos_status_)+0.001); // NOTE 0.001 it's kind of eps to avoid division by 0
 	}
 
 	// Compute and adapt the scales
 	for(int i=0; i<vm_nb_;i++)
 	{
-	  scales_[i] = (treshold_ - scales_[i]/scales_.sum())/(treshold_ - 1);
+	  scales_(i) = (treshold_ - scales_(i)/scales_.sum())/(treshold_ - 1);
 	  
 	}
-
 	// Compute the force from the vms
 	f_vm_.fill(0.0);
 	for(int i=0; i<vm_nb_;i++)
@@ -335,7 +357,7 @@ void VfForceController::StepStatus()
 	  K_ = vm_vector_[i]->getK();
 	  B_ = vm_vector_[i]->getB();
 	  
-	  f_vm_ += scales_[i] * (K_ * (vm_state_[i] - cart_pos_status_) + B_ * (vm_state_dot_[i] - cart_vel_status_)); // Sum over all the vms
+	  f_vm_ += scales_(i) * (K_ * (vm_state_[i] - cart_pos_status_) + B_ * (vm_state_dot_[i] - cart_vel_status_)); // Sum over all the vms
 	}
 	
 	rt_publishers_path_.PublishAll();

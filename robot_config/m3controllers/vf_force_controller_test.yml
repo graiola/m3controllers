@@ -5,7 +5,7 @@ chain: RIGHT_ARM
 joints_mask: 1,1,1,1,1,1,1
 controller_type: pos
 dynamic: m3dynamatics_right_arm_test
-file_names: ['/home/gennaro/workspace/m3controllers/data/gmm_1.txt','/home/gennaro/workspace/m3controllers/data/gmm_2.txt'] 
+file_names: ['/home/gennaro/workspace/m3controllers/data/task_1.txt','/home/gennaro/workspace/m3controllers/data/task_2.txt']  #['/home/gennaro/workspace/m3controllers/data/gmm_1.txt','/home/gennaro/workspace/m3controllers/data/gmm_2.txt'] 
 ik:
   damp_max: 0.8
   epsilon: 0.1
