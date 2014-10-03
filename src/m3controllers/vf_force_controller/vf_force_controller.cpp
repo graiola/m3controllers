@@ -11,6 +11,12 @@ using namespace Eigen;
 using namespace virtual_mechanism_gmr;
 using namespace DmpBbo;
 
+// Checks
+// 	assert(centers_.size() == static_cast<size_t>(Ndof_));
+// 	assert(periods_.size() == static_cast<size_t>(Ndof_));
+// 	assert(magnitudes_.size() == static_cast<size_t>(Ndof_));
+
+
 bool VfForceController::LinkDependentComponents()
 {
 	
@@ -28,7 +34,6 @@ bool VfForceController::LinkDependentComponents()
 
 void VfForceController::Startup()
 {	
-	
 	M3Controller::Startup();
 	
 	// Resize
@@ -58,7 +63,7 @@ void VfForceController::Startup()
 	vm_state_.resize(cart_size_);
 	vm_state_dot_.resize(cart_size_);
 	
-	vm_ = new VirtualMechanismGmr(cart_size_,fa_shr_ptr_);
+	vm_ = new VirtualMechanismGmr(cart_size_,fa_vector_[0]);
 	
 	// User velocity, vf and joint vel commands
 	jacobian_.resize(3,Ndof_controlled_);
@@ -99,12 +104,13 @@ void VfForceController::Startup()
 		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"cmd_force",root_name_);
 		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_cmd_);
 
- 	        
 		rt_publishers_path_.AddPublisher(*ros_nh_ptr_,"robot_pos",cart_pos_status_.size(),&cart_pos_status_);
 		rt_publishers_path_.AddPublisher(*ros_nh_ptr_,"vm_pos",vm_state_.size(),&vm_state_);
 	}
 #endif
 
+    INIT_CNT(tmp_dt_status_);
+    INIT_CNT(tmp_dt_cmd_);
 }
 
 void VfForceController::Shutdown()
@@ -123,14 +129,30 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	doc["dynamic"] >> dyn_component_name_;
 
 	// RETRAIN THE DATA FROM TXT FILE
-	std::string file_name;
-	doc["file_name"] >> file_name;
-	std::vector<std::vector<double> > data;
-	//std::string file_name = "/home/gennaro/catkin_ws/src/virtual-fixtures/virtual_mechanism/test/01_txyz.txt";
-	ReadTxtFile(file_name.c_str(),data);
+	std::vector<std::string> file_names;
+	doc["file_names"] >> file_names;
 	
+ 	for(int i=0;i<file_names.size();i++)
+	{
+ 	  //std::cout<<file_names[i]<<std::endl;
+	  
+	  // GMR
+	  ModelParametersGMR* model_parameters_gmr = ModelParametersGMR::loadGMMFromMatrix(file_names[i]);
+	  FunctionApproximatorGMR* fa_ptr = new FunctionApproximatorGMR(model_parameters_gmr);
+	  
+	  // MAKE SHARED POINTER
+	  fa_shr_ptr_.reset(fa_ptr);
+	  fa_vector_.push_back(fa_shr_ptr_);
+	
+	}
+	
+	// GMR
+	//ModelParametersGMR* model_parameters_gmr = ModelParametersGMR::loadGMMFromMatrix(file_name);
+	//FunctionApproximatorGMR* fa_ptr = new FunctionApproximatorGMR(model_parameters_gmr);
+	
+	/*
 	// CONVERT TO EIGEN MATRIX
-	MatrixXd inputs = VectorXd::LinSpaced(data.size(),0.0,1.0);;
+	MatrixXd inputs = VectorXd::LinSpaced(data.size(),0.0,1.0);
 	MatrixXd targets(data.size(), data[0].size()-1); // NOTE Skip time
 	for (int i = 0; i < data.size(); i++)
 	  targets.row(i) = VectorXd::Map(&data[i][1],data[0].size()-1);
@@ -145,9 +167,11 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	
 	// TRAIN
 	fa_ptr->train(inputs,targets);
+	*/
+	
 	
 	// MAKE SHARED POINTER
-	fa_shr_ptr_.reset(fa_ptr);
+	//fa_shr_ptr_.reset(fa_ptr);
 	
 	const YAML::Node& ik = doc["ik"];
 	double damp_max, epsilon;
@@ -195,6 +219,8 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 void VfForceController::StepStatus()
 {
 	
+        SAVE_TIME(start_dt_status_);
+  
 	M3Controller::StepMotorsStatus(); // Read the joints status from motors
 
 	for(int i=0;i<Ndof_controlled_;i++)
@@ -211,7 +237,7 @@ void VfForceController::StepStatus()
             }
             
  
-	user_torques_ = torques_status_ - torques_id_;
+	//user_torques_ = torques_status_ - torques_id_;
 
         //for(int i=0;i<Ndof_controlled_;i++)
         //    user_torques_[i] = user_torques_[i];
@@ -246,11 +272,13 @@ void VfForceController::StepStatus()
 	jacobian_t_pinv_ = svd_->matrixV() * svd_vect_.asDiagonal() * svd_->matrixU().transpose();
 	// END IK
 
-	f_user_ = jacobian_t_pinv_ * (-1) * user_torques_;
+	//f_user_ = jacobian_t_pinv_ * (-1) * user_torques_;
+	
+	f_user_ = jacobian_t_pinv_ * (-1) * (torques_status_ - torques_id_);
 	
                 
-//         std::cout<<"***"<<std::endl;
-//         std::cout<<f_user_<<std::endl;
+	//         std::cout<<"***"<<std::endl;
+	//         std::cout<<f_user_<<std::endl;
         
         
 	// Robot cart stuff
@@ -274,10 +302,17 @@ void VfForceController::StepStatus()
 	rt_publishers_wrench_.PublishAll();
 	
 	M3Controller::StepStatus(); // Update the status sds
+	
+	SAVE_TIME(end_dt_status_);
+        PRINT_TIME(start_dt_status_,end_dt_status_,tmp_dt_status_,"status");
+	
 }
 
 void VfForceController::StepCommand()
 {	
+  
+        SAVE_TIME(start_dt_cmd_);
+  
 	M3Controller::StepCommand(); // Update the command sds
 	
 	f_cmd_ = f_vm_ + f_user_;
@@ -290,8 +325,6 @@ void VfForceController::StepCommand()
 
         
         torques_cmd_ = jacobian_t_reduced_ * f_cmd_;
-        
-        
         
         //torques_cmd_ = jacobian_t_ * f_cmd_;
 	
@@ -311,8 +344,6 @@ void VfForceController::StepCommand()
  	//M3Controller::StepMotorsCommand(joints_torques_cmd_);
 	
 	
-
-	
 	 // Motors on
           if (m3_controller_interface_command_.enable())
           {
@@ -323,10 +354,6 @@ void VfForceController::StepCommand()
                     bot_->SetSlewRateProportional(chain_,i,1.0);
                     bot_->SetModeTorqueGc(chain_,i);
                     bot_->SetTorque_mNm(chain_,i,m2mm(torques_cmd_[i]));
-                    
-  
-                    
-                    
                    }
                    
                    for(int i=4;i<Ndof_;i++)
@@ -339,7 +366,8 @@ void VfForceController::StepCommand()
                    
           }
 
-
+	SAVE_TIME(end_dt_cmd_);
+        PRINT_TIME(start_dt_cmd_,end_dt_cmd_,tmp_dt_cmd_,"cmd");
 	
 	
 	
