@@ -117,8 +117,12 @@ class VfForceController : public M3Controller
 		m3::M3Dynamatics* dyn_component_;
 
 		boost::shared_ptr<fa_t> fa_shr_ptr_;
+		
 		std::vector<boost::shared_ptr<fa_t> > fa_vector_;
-		virtual_mechanism_gmr::VirtualMechanismGmr* vm_;
+		
+		std::vector<virtual_mechanism_gmr::VirtualMechanismGmr*> vm_vector_;
+		
+		int vm_nb_;
 		
 		kdl_kinematics::KDLClik* kin_;
 		
@@ -136,7 +140,7 @@ class VfForceController : public M3Controller
 		cart_t vm_state_;
 		cart_t vm_state_dot_;
 		
-		double c_;
+		
 		//long long loop_cnt_;
 // 		Eigen::MatrixXd T_;
 // 		Eigen::MatrixXd Pi_;
@@ -149,7 +153,8 @@ class VfForceController : public M3Controller
 		Eigen::MatrixXd jacobian_t_pinv_;
 		
 		int cart_size_;
-		
+		double treshold_;
+		Eigen::VectorXd scales_;
                 Eigen::VectorXd svd_vect_;
                 boost::shared_ptr<svd_t> svd_;
                 

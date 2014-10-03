@@ -63,16 +63,30 @@ void VfForceController::Startup()
 	vm_state_.resize(cart_size_);
 	vm_state_dot_.resize(cart_size_);
 	
-	vm_ = new VirtualMechanismGmr(cart_size_,fa_vector_[0]);
+	// Number of virtual mechanisms
+	vm_nb_ = fa_vector_.size();
+	
+	for(int i=0; i<vm_nb_;i++)
+	  vm_vector_ .push_back(new VirtualMechanismGmr(cart_size_,fa_vector_[i]));
 	
 	// User velocity, vf and joint vel commands
 	jacobian_.resize(3,Ndof_controlled_);
 	jacobian_t_.resize(Ndof_controlled_,3);
 	jacobian_t_pinv_.resize(Ndof_controlled_,3);
         jacobian_t_reduced_.resize(4,3);
+	scales_.resize(vm_nb_);
 	f_user_.resize(3);
 	f_vm_.resize(3);
 	f_cmd_.resize(3);
+	
+	// Clear
+	f_user_.fill(0.0);
+	f_vm_.fill(0.0);
+	f_cmd_.fill(0.0);
+	scales_ .fill(0.0);
+	
+	treshold_ = 0.5;
+	
 	//T_.resize(3,1);
 	//Pi_.resize(3,1);
 	//Pf_.resize(3,1);
@@ -285,18 +299,36 @@ void VfForceController::StepStatus()
 	kin_->ComputeFk(position_status_,cart_pos_status_);
 	kin_->ComputeFkDot(position_status_,velocity_status_,cart_vel_status_);
 	
-	// MV Stuff
-	vm_->Update(cart_pos_status_,cart_vel_status_,dt_);
-	vm_->getState(vm_state_);
-	vm_->getStateDot(vm_state_dot_);
 	
-	K_ = vm_->getK();
-	B_ = vm_->getB();
 	
-	f_vm_ = K_ * (vm_state_ - cart_pos_status_) + B_ * (vm_state_dot_ - cart_vel_status_);
+	// Update the vms, take their distances
+	for(int i=0; i<vm_nb_;i++)
+	{
+	  vm_vector_[i]->Update(cart_pos_status_,cart_vel_status_,dt_);
+	  scales_[i] = 1/(vm_vector_[i]->getDistance(cart_pos_status_)+0.001); // NOTE 0.001 it's kind of eps to avoid division by 0
+	}
 
-	//std::cout<<"HELLO"<<std::endl;
-	//getchar();
+	// Compute and adapt the scales
+	for(int i=0; i<vm_nb_;i++)
+	{
+	  scales_[i] = (treshold_ - scales_[i]/scales_.sum())/(treshold_ - 1);
+	  
+	}
+
+	// Compute the force from the vms
+	for(int i=0; i<vm_nb_;i++)
+	{  
+	  
+	  vm_vector_[i]->getState(vm_state_);
+	  vm_vector_[i]->getStateDot(vm_state_dot_);
+	
+	  K_ = vm_vector_[i]->getK();
+	  B_ = vm_vector_[i]->getB();
+	  
+	  
+	  f_vm_ += scales_[i] * (K_ * (vm_state_ - cart_pos_status_) + B_ * (vm_state_dot_ - cart_vel_status_)); // Sum over all the vms
+	
+	}
 	
 	rt_publishers_path_.PublishAll();
 	rt_publishers_wrench_.PublishAll();
