@@ -73,7 +73,6 @@ void VfForceController::Startup()
 	  vm_state_dot_.push_back(vect);
 	}
 	
-	
 	// User velocity, vf and joint vel commands
 	jacobian_.resize(3,Ndof_controlled_);
 	jacobian_t_.resize(Ndof_controlled_,3);
@@ -91,20 +90,10 @@ void VfForceController::Startup()
 	scales_ .fill(0.0);
 	
 	treshold_ = 0.5;
-	
-	//T_.resize(3,1);
-	//Pi_.resize(3,1);
-	//Pf_.resize(3,1);
-        
+
         svd_vect_.resize(3);
         svd_.reset(new svd_t(3,Ndof_controlled_));
 	
-	// Define the virtual fixture
-	//Pi_ << 0.0, 0.0, 0.0;
-	//Pf_ << 0.0, 0.0, 0.5;
-	//T_ = (Pf_-Pi_)/(Pf_-Pi_).norm();
-	//D_ = T_*(T_.transpose()*T_).inverse() * T_.transpose();
- 	//I_ = MatrixXd::Identity(3,3);
 
 #ifdef USE_ROS_RT_PUBLISHER
 	if(ros::master::check()){ 
@@ -123,7 +112,6 @@ void VfForceController::Startup()
 		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"cmd_force",root_name_);
 		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_cmd_);
 
-		
  		rt_publishers_path_.AddPublisher(*ros_nh_ptr_,"robot_pos",cart_pos_status_.size(),&cart_pos_status_);
 		for(int i=0; i<vm_nb_;i++)
 		{
@@ -196,32 +184,6 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	  
 	}
 	
-	// GMR
-	//ModelParametersGMR* model_parameters_gmr = ModelParametersGMR::loadGMMFromMatrix(file_name);
-	//FunctionApproximatorGMR* fa_ptr = new FunctionApproximatorGMR(model_parameters_gmr);
-	
-	/*
-	// CONVERT TO EIGEN MATRIX
-	MatrixXd inputs = VectorXd::LinSpaced(data.size(),0.0,1.0);
-	MatrixXd targets(data.size(), data[0].size()-1); // NOTE Skip time
-	for (int i = 0; i < data.size(); i++)
-	  targets.row(i) = VectorXd::Map(&data[i][1],data[0].size()-1);
-	
-	// MAKE THE FUNCTION APPROXIMATORS
-	int input_dim = 1;
-	int n_basis_functions = 25;
-	
-	// GMR
-	MetaParametersGMR* meta_parameters_gmr = new MetaParametersGMR(input_dim,n_basis_functions);
-	FunctionApproximatorGMR* fa_ptr = new FunctionApproximatorGMR(meta_parameters_gmr);
-	
-	// TRAIN
-	fa_ptr->train(inputs,targets);
-	*/
-	
-	// MAKE SHARED POINTER
-	//fa_shr_ptr_.reset(fa_ptr);
-	
 	const YAML::Node& ik = doc["ik"];
 	double damp_max, epsilon;
 	//ik["cart_mask"] >> cart_mask_str_;
@@ -284,6 +246,10 @@ void VfForceController::StepStatus()
                 velocity_status_[joints_mask_cnt_] = joints_vel_status_[i];
                 joints_mask_cnt_++;
             }
+            
+            
+        // Set shared state    
+            
             
 	kin_->ComputeJac(position_status_,jacobian_);
         
@@ -352,7 +318,6 @@ void VfForceController::StepStatus()
 
 void VfForceController::StepCommand()
 {	
-  
         SAVE_TIME(start_dt_cmd_);
   
 	//M3Controller::StepCommand(); // Update the command sds

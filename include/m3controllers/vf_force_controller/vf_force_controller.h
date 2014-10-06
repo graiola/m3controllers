@@ -75,11 +75,55 @@ bool rtTaskInit(RT_TASK* rt_task ,std::string task_name, double dt)
 }
 
 
+
 namespace m3controllers
 {
+  
   typedef DmpBbo::FunctionApproximatorGMR fa_t;
   typedef Eigen::JacobiSVD<Eigen::MatrixXd> svd_t;
-	
+  
+  
+class VmThread
+{
+  typedef boost::mutex mutex_t;
+  
+  public:
+    VmThread(string::string name):kill_thread_(false),run_status_(false)
+    {
+      name_ = name;
+    }
+    
+    void RunThread() 
+    {
+      // check if already triggered
+      boost::unique_lock<mutex_t> guard(mtx_run_, boost::defer_lock);
+      if(guard.try_lock())
+      {
+        run_status_ = true;
+        //guard.unlock(); get unlocked after the scope anyways
+      }
+    }
+    
+  private:
+    /// Input state
+    cart_t torques_status_;
+    cart_t position_status_;
+    cart_t velocity_status_;
+    /// Output state
+    cart_t f_cmd_;
+    
+    /// Thread Stuff
+    std::string name_;
+    boost::thread thread_;		
+    std::atomic<bool> kill_thread_;
+    std::atomic<bool> updated_;
+    /// \brief Execution status of the Device, true is running, false is stopped.
+    std::atomic<bool> run_status_;
+    mutex_t mtx_run_;
+    mutex_t mtx_state_;
+    
+};
+  
 class VfForceController : public M3Controller
 {
 	public:
