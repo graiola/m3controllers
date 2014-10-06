@@ -43,12 +43,35 @@ static long long start_dt_cmd_,     end_dt_cmd_,    elapsed_dt_cmd_;
 #define SAVE_TIME(out) do { if (TIME_ACTIVE) getCpuCount((out)); } while (0)
 #define PRINT_TIME(T_start,T_end,cnt,string) do { if (TIME_ACTIVE) if ((cnt)%100==0) ROS_INFO("%s: %fs",string,count2Sec(((T_end) - (T_start)))); cnt = cnt++ & INT_MAX;} while (0)
 
-inline void getCpuCount(long long& out){
+inline void getCpuCount(long long& out)
+{
     out = nano2count(rt_get_cpu_time_ns());
 }
 
-inline double count2Sec(const long long in){
+inline double count2Sec(const long long in)
+{
     return (NANO2SEC((double)count2nano(in)));
+}
+
+bool rtTaskInit(RT_TASK* rt_task ,std::string task_name, double dt)
+{
+    rt_allow_nonroot_hrt();							
+    //Args: Name, Priority, Stack Size, max_msg_size, Policy, cpus_allowed
+    if (!(rt_task = rt_task_init_schmod(nam2num(task_name.c_str()),0,0,0,SCHED_FIFO,0xF)))
+    {
+	std::string err("Cannot create real time task: "+task_name);
+	throw std::runtime_error(err);
+	return false;
+    }
+    // Set the task period
+    RTIME tick_period = nano2count(SEC2NANO(dt)); // This is ~=dt;
+    rt_task_make_periodic(rt_task, rt_get_time() + tick_period, tick_period);
+    mlockall(MCL_CURRENT | MCL_FUTURE); // Prevent memory swaps
+    
+#ifdef HARD_RT
+    rt_make_hard_real_time();
+#endif
+    return true;
 }
 
 
@@ -71,42 +94,6 @@ class VfForceController : public M3Controller
 		void StepCommand();
 		bool LinkDependentComponents();
 		
-		/*VfControllerStatus vf_controller_status_;
-		VfControllerCommand vf_controller_cmd_;
-		VfControllerParam vf_controller_param_;
-		
-		M3BaseStatus* GetBaseStatus(){return vf_controller_status_.mutable_base();} //NOTE make abstract M3Component happy*/
-/*		
-#ifdef USE_ROS_RT_PUBLISHER
-		ros::NodeHandle* ros_nh_ptr_;
-		tools::RealTimePublishers<tools::RealTimePublisherPath> rt_publishers_;
-		
-		void RosInit()
-		{
-			std::string ros_node_name = GetName();
-			int argc = 1;
-			char* arg0 = strdup(ros_node_name.c_str());
-			char* argv[] = {arg0, 0};
-			ros::init(argc, argv, ros_node_name,ros::init_options::NoSigintHandler);
-			free (arg0);
-			
-			m3rt::M3_INFO("Checking for running roscore... %s\n",GetName().c_str());
-			if(ros::master::check()){
-				ros_nh_ptr_ = new ros::NodeHandle(ros_node_name);
-			}
-			else
-			{
-				ros_nh_ptr_ = NULL;
-				m3rt::M3_INFO("Roscore is not running, can not initializate the realtime publishers for component %s, proceeding without them...\n",GetName().c_str());
-			}
-		}
-		
-		void RosShutdown()
-		{	if(ros_nh_ptr_!=NULL)
-				ros_nh_ptr_->shutdown();
-		}
-#endif
-*/		
 	private:
 		enum {DEFAULT};
 
@@ -140,13 +127,6 @@ class VfForceController : public M3Controller
 		std::vector<cart_t> vm_state_;
 		std::vector<cart_t> vm_state_dot_;
 		
-		
-		//long long loop_cnt_;
-// 		Eigen::MatrixXd T_;
-// 		Eigen::MatrixXd Pi_;
-// 		Eigen::MatrixXd Pf_;
-// 		Eigen::MatrixXd D_;
-// 		Eigen::MatrixXd I_;
 		Eigen::MatrixXd jacobian_;
 		Eigen::MatrixXd jacobian_t_;
                 Eigen::MatrixXd jacobian_t_reduced_;

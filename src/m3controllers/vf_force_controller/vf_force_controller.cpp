@@ -179,8 +179,6 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	    inputs.row(i) = VectorXd::Map(&data[i][0],1);
 	  }
 	  
-	  
-	  
 	  // MAKE THE FUNCTION APPROXIMATORS
 	  int input_dim = 1;
 	  int n_basis_functions = 25;
@@ -220,7 +218,6 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	// TRAIN
 	fa_ptr->train(inputs,targets);
 	*/
-	
 	
 	// MAKE SHARED POINTER
 	//fa_shr_ptr_.reset(fa_ptr);
@@ -288,26 +285,11 @@ void VfForceController::StepStatus()
                 joints_mask_cnt_++;
             }
             
- 
-	//user_torques_ = torques_status_ - torques_id_;
-
-        //for(int i=0;i<Ndof_controlled_;i++)
-        //    user_torques_[i] = user_torques_[i];
-
-        
 	kin_->ComputeJac(position_status_,jacobian_);
         
-	//std::cout<<jacobian_<<std::endl;
-	
-
 	jacobian_t_= jacobian_.transpose();
 	
 
-	//std::cout<<jacobian_t_<<std::endl;
-	//getchar();
-	
-	//jacobian_.transposeInPlace(); //NOTE No rt safe!!! http://eigen.tuxfamily.org/dox-devel/classEigen_1_1DenseBase.html#ac501bd942994af7a95d95bee7a16ad2a
-	
 	// IK
 	//Eigen::JacobiSVD<Eigen::MatrixXd> svd;
 	svd_->compute(jacobian_t_, ComputeThinU | ComputeThinV);
@@ -323,22 +305,15 @@ void VfForceController::StepStatus()
 	}
 	jacobian_t_pinv_ = svd_->matrixV() * svd_vect_.asDiagonal() * svd_->matrixU().transpose();
 	// END IK
-
-	//f_user_ = jacobian_t_pinv_ * (-1) * user_torques_;
 	
 	f_user_ = jacobian_t_pinv_ * (-1) * (torques_status_ - torques_id_);
 	
-                
-	//         std::cout<<"***"<<std::endl;
-	//         std::cout<<f_user_<<std::endl;
-        
-        
+    
 	// Robot cart stuff
 	kin_->ComputeFk(position_status_,cart_pos_status_);
 	kin_->ComputeFkDot(position_status_,velocity_status_,cart_vel_status_);
 	
-	
-	
+
 	// Update the vms, take their distances
 	for(int i=0; i<vm_nb_;i++)
 	{
@@ -368,7 +343,7 @@ void VfForceController::StepStatus()
 	rt_publishers_path_.PublishAll();
 	rt_publishers_wrench_.PublishAll();
 	
-	M3Controller::StepStatus(); // Update the status sds
+	//M3Controller::StepStatus(); // Update the status sds
 	
 	SAVE_TIME(end_dt_status_);
         PRINT_TIME(start_dt_status_,end_dt_status_,tmp_dt_status_,"status");
@@ -380,7 +355,7 @@ void VfForceController::StepCommand()
   
         SAVE_TIME(start_dt_cmd_);
   
-	M3Controller::StepCommand(); // Update the command sds
+	//M3Controller::StepCommand(); // Update the command sds
 	
 	f_cmd_ = f_vm_ + f_user_;
 
