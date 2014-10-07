@@ -362,8 +362,17 @@ class VmThread
     
     void startThread()
     {
-     kill_thread_ = false;
-     thread_ = boost::thread(&VmThread::Update, this);
+      kill_thread_ = false;
+     
+      try
+      {
+	thread_ = boost::thread(&VmThread::Update, this);
+      }
+      catch(boost::thread_resource_error &e)
+      {
+	ROS_ERROR_STREAM("exception at VmThread::startThread(), can not create the thread, reason: "<< e.what());
+      }
+     
     }
 
     void stopThread()
