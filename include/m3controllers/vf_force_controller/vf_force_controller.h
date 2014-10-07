@@ -96,7 +96,7 @@ class VmThread
   
   public:
     
-    VmThread(std::string name):kill_thread_(false)//,run_status_(false)
+    VmThread(std::string name):kill_thread_(false),run_status_(false)
     {
       name_ = name;
     }
@@ -263,9 +263,8 @@ class VmThread
       boost::unique_lock<mutex_t> guard(mtx_run_, boost::defer_lock);
       if(guard.try_lock())
       {
-        //run_status_ = true;
+        run_status_ = true;
         //guard.unlock(); get unlocked after the scope anyways
-     
 	INIT_CNT(tmp_dt_computation_);
       }
     }
@@ -274,13 +273,16 @@ class VmThread
     {
       while(!kill_thread_)
       {
-	SAVE_TIME(start_dt_computation_);
-        //r_.reset();
-        computeNewCmd();
-        //run_status_ = false;
-        //r_.sleep();
-	SAVE_TIME(end_dt_computation_);
-	PRINT_TIME(start_dt_computation_,end_dt_computation_,tmp_dt_computation_,"computation");
+	if(run_status_)
+	{
+	  SAVE_TIME(start_dt_computation_);
+	  //r_.reset();
+	  computeNewCmd();
+	  run_status_ = false;
+	  //r_.sleep();
+	  SAVE_TIME(end_dt_computation_);
+	  PRINT_TIME(start_dt_computation_,end_dt_computation_,tmp_dt_computation_,"computation");
+	}
       }
     }
     
@@ -370,9 +372,8 @@ class VmThread
       }
       catch(boost::thread_resource_error &e)
       {
-	ROS_ERROR_STREAM("exception at VmThread::startThread(), can not create the thread, reason: "<< e.what());
+	//ROS_ERROR_STREAM("exception at VmThread::startThread(), can not create the thread, reason: "<< e.what());
       }
-     
     }
 
     void stopThread()

@@ -92,11 +92,10 @@ void VfForceController::StepStatus()
                 joints_mask_cnt_++;
             }
             
-        vm_thread_->setSharedStatus(torques_status_, position_status_, velocity_status_);    
             
+        vm_thread_->setSharedStatus(torques_status_, position_status_, velocity_status_);       
         vm_thread_->RunThread();    
             
-	
 	SAVE_TIME(end_dt_status_);
         PRINT_TIME(start_dt_status_,end_dt_status_,tmp_dt_status_,"status");
 	
