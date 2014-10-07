@@ -34,8 +34,10 @@
 ////////// Activate some timing infos
 static int tmp_dt_status_;
 static int tmp_dt_cmd_;
+static int tmp_dt_computation_;
 static long long start_dt_status_,  end_dt_status_, elapsed_dt_status_;
 static long long start_dt_cmd_,     end_dt_cmd_,    elapsed_dt_cmd_;
+static long long start_dt_computation_,  end_dt_computation_, elapsed_dt_computation_;
 #ifdef TIMING
 #define TIME_ACTIVE 1
 #else
@@ -263,17 +265,22 @@ class VmThread
       {
         //run_status_ = true;
         //guard.unlock(); get unlocked after the scope anyways
+     
+	INIT_CNT(tmp_dt_computation_);
       }
     }
     
     void Update()
     {
-      while(!kill_thread_){
-
+      while(!kill_thread_)
+      {
+	SAVE_TIME(start_dt_computation_);
         //r_.reset();
         computeNewCmd();
         //run_status_ = false;
         //r_.sleep();
+	SAVE_TIME(end_dt_computation_);
+	PRINT_TIME(start_dt_computation_,end_dt_computation_,tmp_dt_computation_,"computation");
       }
     }
     
@@ -361,7 +368,7 @@ class VmThread
 
     void stopThread()
     {
-      thread_.join();
+      thread_.interrupt();
     }
     
     inline void setSharedStatus(const Ref<const VectorXd>& torques_status, const Ref<const VectorXd>& position_status, const Ref<const VectorXd>& velocity_status) // Called externally (Works only if the thread is not running)
