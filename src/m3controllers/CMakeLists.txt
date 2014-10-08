@@ -11,7 +11,7 @@ set(SHARED_OR_STATIC "SHARED")
 #set(CMAKE_CXX_FLAGS "-Wall -std=c++0x")
 set(CMAKE_CXX_FLAGS "-std=c++0x")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -ggdb -DTIMING")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 
 ###############################################################################
 # Find RTAI
