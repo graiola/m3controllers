@@ -91,20 +91,11 @@ void VfForceController::Startup()
 	scales_ .fill(0.0);
 	
 	treshold_ = 0.6;
-	
-	//T_.resize(3,1);
-	//Pi_.resize(3,1);
-	//Pf_.resize(3,1);
+	sum_ = 1.0;
         
         svd_vect_.resize(3);
         svd_.reset(new svd_t(3,Ndof_controlled_));
 	
-	// Define the virtual fixture
-	//Pi_ << 0.0, 0.0, 0.0;
-	//Pf_ << 0.0, 0.0, 0.5;
-	//T_ = (Pf_-Pi_)/(Pf_-Pi_).norm();
-	//D_ = T_*(T_.transpose()*T_).inverse() * T_.transpose();
- 	//I_ = MatrixXd::Identity(3,3);
 
 #ifdef USE_ROS_RT_PUBLISHER
 	if(ros::master::check()){ 
@@ -341,12 +332,14 @@ void VfForceController::StepStatus()
 	  vm_vector_[i]->Update(cart_pos_status_,cart_vel_status_,dt_);
 	  scales_(i) = 1/(vm_vector_[i]->getDistance(cart_pos_status_)+0.001); // NOTE 0.001 it's kind of eps to avoid division by 0
 	}
+	
+	sum_ = scales_.sum();
 
 	// Compute and adapt the scales
 	for(int i=0; i<vm_nb_;i++)
 	{
-	  if(scales_(i)/scales_.sum() > treshold_)
-	    scales_(i) = (treshold_ - scales_(i)/scales_.sum())/(treshold_ - 1);
+	  if(scales_(i)/sum_ > treshold_)
+	    scales_(i) = (treshold_ - scales_(i)/sum_)/(treshold_ - 1);
 	  else
 	    scales_(i) = 0.0;
 	  
