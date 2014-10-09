@@ -171,12 +171,13 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	  std::vector<std::vector<double> > data;
 	  ReadTxtFile(file_names[i].c_str(),data);
 	  // CONVERT TO EIGEN MATRIX
-	  MatrixXd inputs(data.size(), 1);
+	  //MatrixXd inputs(data.size(), 1);
+	  MatrixXd inputs = VectorXd::LinSpaced(data.size(),0.0,1.0);
 	  MatrixXd targets(data.size(), data[0].size()-1); // NOTE Skip time
 	  for (int i = 0; i < data.size(); i++)
 	  {
 	    targets.row(i) = VectorXd::Map(&data[i][1],data[0].size()-1);
-	    inputs.row(i) = VectorXd::Map(&data[i][0],1);
+	    //inputs.row(i) = VectorXd::Map(&data[i][0],1);
 	  }
 	  
 	  
