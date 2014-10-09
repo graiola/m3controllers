@@ -71,42 +71,6 @@ class VfForceController : public M3Controller
 		void StepCommand();
 		bool LinkDependentComponents();
 		
-		/*VfControllerStatus vf_controller_status_;
-		VfControllerCommand vf_controller_cmd_;
-		VfControllerParam vf_controller_param_;
-		
-		M3BaseStatus* GetBaseStatus(){return vf_controller_status_.mutable_base();} //NOTE make abstract M3Component happy*/
-/*		
-#ifdef USE_ROS_RT_PUBLISHER
-		ros::NodeHandle* ros_nh_ptr_;
-		tools::RealTimePublishers<tools::RealTimePublisherPath> rt_publishers_;
-		
-		void RosInit()
-		{
-			std::string ros_node_name = GetName();
-			int argc = 1;
-			char* arg0 = strdup(ros_node_name.c_str());
-			char* argv[] = {arg0, 0};
-			ros::init(argc, argv, ros_node_name,ros::init_options::NoSigintHandler);
-			free (arg0);
-			
-			m3rt::M3_INFO("Checking for running roscore... %s\n",GetName().c_str());
-			if(ros::master::check()){
-				ros_nh_ptr_ = new ros::NodeHandle(ros_node_name);
-			}
-			else
-			{
-				ros_nh_ptr_ = NULL;
-				m3rt::M3_INFO("Roscore is not running, can not initializate the realtime publishers for component %s, proceeding without them...\n",GetName().c_str());
-			}
-		}
-		
-		void RosShutdown()
-		{	if(ros_nh_ptr_!=NULL)
-				ros_nh_ptr_->shutdown();
-		}
-#endif
-*/		
 	private:
 		enum {DEFAULT};
 
