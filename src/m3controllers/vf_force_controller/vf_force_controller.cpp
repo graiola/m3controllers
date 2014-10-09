@@ -231,14 +231,7 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	ik["damp_max"] >> damp_max;
 	ik["epsilon"] >> epsilon;
 
-	Eigen::MatrixXd gains = MatrixXd::Zero(6,6);
-	ik["gain_x"] >> gains(0,0);
-	ik["gain_y"] >> gains(1,1);
-	ik["gain_z"] >> gains(2,2);
-	ik["gain_roll"] >> gains(3,3);
-	ik["gain_pitch"] >> gains(4,4);
-	ik["gain_yaw"] >> gains(5,5);
-	
+
 	// Controller sample time
 	dt_ = 1/static_cast<double>(RT_TASK_FREQUENCY);
 	
@@ -256,7 +249,7 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 
 	try
 	{
-		kin_ = new KDLClik (root_name_,end_effector_name_,damp_max,epsilon,gains,dt_);
+		kin_ = new KDLKinematics (root_name_,end_effector_name_,damp_max,epsilon);
 	}
 	catch(const std::runtime_error& e)
 	{

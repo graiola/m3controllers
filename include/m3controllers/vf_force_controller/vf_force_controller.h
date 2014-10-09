@@ -88,7 +88,7 @@ class VfForceController : public M3Controller
 		
 		int vm_nb_;
 		
-		kdl_kinematics::KDLClik* kin_;
+		kdl_kinematics::KDLKinematics* kin_;
 		
 		joints_t torques_id_;
 		joints_t user_torques_;
