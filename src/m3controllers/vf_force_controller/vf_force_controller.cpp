@@ -80,6 +80,8 @@ void VfForceController::Startup()
 	jacobian_t_pinv_.resize(Ndof_controlled_,3);
         jacobian_t_reduced_.resize(4,3);
 	scales_.resize(vm_nb_);
+	phase_.resize(vm_nb_);
+	phase_dot_.resize(vm_nb_);
 	f_user_.resize(3);
 	f_vm_.resize(3);
 	f_cmd_.resize(3);
@@ -89,6 +91,8 @@ void VfForceController::Startup()
 	f_vm_.fill(0.0);
 	f_cmd_.fill(0.0);
 	scales_ .fill(0.0);
+	phase_.fill(0.0);
+	phase_dot_.fill(0.0);
 	
 	treshold_ = 0.6;
 	sum_ = 1.0;
@@ -115,7 +119,9 @@ void VfForceController::Startup()
 		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_cmd_);
 		
 		
-		rt_publishers_scales_.AddPublisher(*ros_nh_ptr_,"scales",scales_.size(),&scales_);
+		rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"scales",scales_.size(),&scales_);
+		rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase",phase_.size(),&phase_);
+		rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase_dot",phase_dot_.size(),&phase_dot_);
 		
  		rt_publishers_path_.AddPublisher(*ros_nh_ptr_,"robot_pos",cart_pos_status_.size(),&cart_pos_status_);
 		for(int i=0; i<vm_nb_;i++)
@@ -315,22 +321,17 @@ void VfForceController::StepStatus()
 	
 	f_user_ = jacobian_t_pinv_ * (-1) * (torques_status_ - torques_id_);
 	
-                
-	//         std::cout<<"***"<<std::endl;
-	//         std::cout<<f_user_<<std::endl;
-        
-        
 	// Robot cart stuff
 	kin_->ComputeFk(position_status_,cart_pos_status_);
 	kin_->ComputeFkDot(position_status_,velocity_status_,cart_vel_status_);
-	
-	
 	
 	// Update the vms, take their distances
 	for(int i=0; i<vm_nb_;i++)
 	{
 	  vm_vector_[i]->Update(cart_pos_status_,cart_vel_status_,dt_);
-	  scales_(i) = 1/(vm_vector_[i]->getDistance(cart_pos_status_)+0.001); // NOTE 0.001 it's kind of eps to avoid division by 0
+	  scales_(i) = 1/(vm_vector_[i]->getDistance(cart_pos_status_) + 0.001); // NOTE 0.001 it's kind of eps to avoid division by 0
+	  phase_(i) = vm_vector_[i]->getPhase();
+	  phase_dot_(i) = vm_vector_[i]->getPhaseDot();
 	}
 	
 	sum_ = scales_.sum();
@@ -342,7 +343,6 @@ void VfForceController::StepStatus()
 	    scales_(i) = (treshold_ - scales_(i)/sum_)/(treshold_ - 1);
 	  else
 	    scales_(i) = 0.0;
-	  
 	}
 	// Compute the force from the vms
 	f_vm_.fill(0.0);
@@ -359,7 +359,7 @@ void VfForceController::StepStatus()
 	
 	rt_publishers_path_.PublishAll();
 	rt_publishers_wrench_.PublishAll();
-	rt_publishers_scales_.PublishAll();
+	rt_publishers_values_.PublishAll();
 	
 	M3Controller::StepStatus(); // Update the status sds
 	

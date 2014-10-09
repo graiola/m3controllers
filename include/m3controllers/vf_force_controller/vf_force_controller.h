@@ -76,7 +76,7 @@ class VfForceController : public M3Controller
 
 		tools::RealTimePublishers<tools::RealTimePublisherPath> rt_publishers_path_;
 		tools::RealTimePublishers<tools::RealTimePublisherWrench> rt_publishers_wrench_;
-		tools::RealTimePublishers<tools::RealTimePublisherJoints> rt_publishers_scales_;
+		tools::RealTimePublishers<tools::RealTimePublisherJoints> rt_publishers_values_;
 		
 		std::string dyn_component_name_, cart_mask_str_, end_effector_name_, root_name_;
 		m3::M3Dynamatics* dyn_component_;
@@ -131,7 +131,8 @@ class VfForceController : public M3Controller
 		double dt_;
 		double B_, K_;
 		double sum_;
-		
+		Eigen::VectorXd phase_;
+		Eigen::VectorXd phase_dot_;
 
 };
 
