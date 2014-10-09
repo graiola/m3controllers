@@ -90,7 +90,7 @@ void VfForceController::Startup()
 	f_cmd_.fill(0.0);
 	scales_ .fill(0.0);
 	
-	treshold_ = 0.5;
+	treshold_ = 0.6;
 	
 	//T_.resize(3,1);
 	//Pi_.resize(3,1);
@@ -349,7 +349,10 @@ void VfForceController::StepStatus()
 	// Compute and adapt the scales
 	for(int i=0; i<vm_nb_;i++)
 	{
-	  scales_(i) = (treshold_ - scales_(i)/scales_.sum())/(treshold_ - 1);
+	  if(scales_(i)/scales_.sum() > treshold_)
+	    scales_(i) = (treshold_ - scales_(i)/scales_.sum())/(treshold_ - 1);
+	  else
+	    scales_(i) = 0.0;
 	  
 	}
 	// Compute the force from the vms

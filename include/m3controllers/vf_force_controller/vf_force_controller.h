@@ -165,6 +165,8 @@ class VfForceController : public M3Controller
                 double svd_curr, damp, damp_max, epsilon;
 		double dt_;
 		double B_, K_;
+		
+
 };
 
 
