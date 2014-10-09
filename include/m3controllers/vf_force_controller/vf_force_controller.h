@@ -76,6 +76,7 @@ class VfForceController : public M3Controller
 
 		tools::RealTimePublishers<tools::RealTimePublisherPath> rt_publishers_path_;
 		tools::RealTimePublishers<tools::RealTimePublisherWrench> rt_publishers_wrench_;
+		tools::RealTimePublishers<tools::RealTimePublisherJoints> rt_publishers_scales_;
 		
 		std::string dyn_component_name_, cart_mask_str_, end_effector_name_, root_name_;
 		m3::M3Dynamatics* dyn_component_;

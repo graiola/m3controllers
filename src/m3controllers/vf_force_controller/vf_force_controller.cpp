@@ -122,7 +122,9 @@ void VfForceController::Startup()
 		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_user_);
 		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"cmd_force",root_name_);
 		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_cmd_);
-
+		
+		
+		rt_publishers_scales_.AddPublisher(*ros_nh_ptr_,"scales",scales_.size(),&scales_);
 		
  		rt_publishers_path_.AddPublisher(*ros_nh_ptr_,"robot_pos",cart_pos_status_.size(),&cart_pos_status_);
 		for(int i=0; i<vm_nb_;i++)
@@ -364,6 +366,7 @@ void VfForceController::StepStatus()
 	
 	rt_publishers_path_.PublishAll();
 	rt_publishers_wrench_.PublishAll();
+	rt_publishers_scales_.PublishAll();
 	
 	M3Controller::StepStatus(); // Update the status sds
 	
