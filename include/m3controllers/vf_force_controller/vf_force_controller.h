@@ -105,13 +105,6 @@ class VfForceController : public M3Controller
 		std::vector<cart_t> vm_state_;
 		std::vector<cart_t> vm_state_dot_;
 		
-		
-		//long long loop_cnt_;
-// 		Eigen::MatrixXd T_;
-// 		Eigen::MatrixXd Pi_;
-// 		Eigen::MatrixXd Pf_;
-// 		Eigen::MatrixXd D_;
-// 		Eigen::MatrixXd I_;
 		Eigen::MatrixXd jacobian_;
 		Eigen::MatrixXd jacobian_t_;
                 Eigen::MatrixXd jacobian_t_reduced_;
@@ -133,6 +126,8 @@ class VfForceController : public M3Controller
 		double sum_;
 		Eigen::VectorXd phase_;
 		Eigen::VectorXd phase_dot_;
+		Eigen::VectorXd det_mv_;
+		Eigen::VectorXd torque_mv_;
 
 };
 
