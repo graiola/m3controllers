@@ -159,7 +159,9 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 
 	// RETRAIN THE DATA FROM TXT FILE
 	std::vector<std::string> file_names;
+	bool serialized;
 	doc["file_names"] >> file_names;
+	doc["serialized"] >> serialized;
 	
  	for(int i=0;i<file_names.size();i++)
 	{
@@ -171,37 +173,44 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	  //fa_shr_ptr_.reset(fa_ptr);
 	  //fa_vector_.push_back(fa_shr_ptr_);
 	  
-	  
 	  // Read from file the inputs / targets
 	  std::vector<std::vector<double> > data;
 	  ReadTxtFile(file_names[i].c_str(),data);
-	  // CONVERT TO EIGEN MATRIX
-	  //MatrixXd inputs(data.size(), 1);
-	  MatrixXd inputs = VectorXd::LinSpaced(data.size(),0.0,1.0);
-	  MatrixXd targets(data.size(), data[0].size()-1); // NOTE Skip time
-	  for (int i = 0; i < data.size(); i++)
+	  FunctionApproximatorGMR* fa_ptr = NULL;
+	  
+	  if(!serialized)
 	  {
-	    targets.row(i) = VectorXd::Map(&data[i][1],data[0].size()-1);
-	    //inputs.row(i) = VectorXd::Map(&data[i][0],1);
+	    // CONVERT TO EIGEN MATRIX
+	    //MatrixXd inputs(data.size(), 1);
+	    MatrixXd inputs = VectorXd::LinSpaced(data.size(),0.0,1.0);
+	    MatrixXd targets(data.size(), data[0].size()-1); // NOTE Skip time
+	    for (int i = 0; i < data.size(); i++)
+	    {
+	      targets.row(i) = VectorXd::Map(&data[i][1],data[0].size()-1);
+	      //inputs.row(i) = VectorXd::Map(&data[i][0],1);
+	    }
+	    
+	    // MAKE THE FUNCTION APPROXIMATORS
+	    int input_dim = 1;
+	    int n_basis_functions = 25;
+	    
+	    // GMR
+	    MetaParametersGMR* meta_parameters_gmr = new MetaParametersGMR(input_dim,n_basis_functions);
+	    fa_ptr = new FunctionApproximatorGMR(meta_parameters_gmr);
+	    
+	    // TRAIN
+	    fa_ptr->train(inputs,targets);
+
 	  }
-	  
-	  
-	  
-	  // MAKE THE FUNCTION APPROXIMATORS
-	  int input_dim = 1;
-	  int n_basis_functions = 25;
-	  
-	  // GMR
-	  MetaParametersGMR* meta_parameters_gmr = new MetaParametersGMR(input_dim,n_basis_functions);
-	  FunctionApproximatorGMR* fa_ptr = new FunctionApproximatorGMR(meta_parameters_gmr);
-	  
-	  // TRAIN
-	  fa_ptr->train(inputs,targets);
+	  else
+	  {
+	    ModelParametersGMR* model_parameters_gmr = ModelParametersGMR::loadGMMFromMatrix(file_names[i]);
+	    fa_ptr = new FunctionApproximatorGMR(model_parameters_gmr);
+	  }
 	  
 	  // MAKE SHARED POINTER
 	  fa_shr_ptr_.reset(fa_ptr);
 	  fa_vector_.push_back(fa_shr_ptr_);
-	  
 	}
 	
 	// GMR
