@@ -126,6 +126,7 @@ class VfForceController : public M3Controller
 		double sum_;
 		Eigen::VectorXd phase_;
 		Eigen::VectorXd phase_dot_;
+                Eigen::VectorXd phase_ddot_;
 		Eigen::VectorXd det_mv_;
 		Eigen::VectorXd torque_mv_;
 		

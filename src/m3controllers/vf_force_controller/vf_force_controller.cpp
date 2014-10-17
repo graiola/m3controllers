@@ -72,7 +72,10 @@ void VfForceController::Startup()
 	  vm_state_.push_back(vect);
 	  vm_state_dot_.push_back(vect);
 	}
-	
+	for(int i=0; i<vm_nb_;i++)
+        {
+            vm_vector_[i]->Init();
+        }
 	
 	// User velocity, vf and joint vel commands
 	jacobian_.resize(3,Ndof_controlled_);
@@ -82,6 +85,7 @@ void VfForceController::Startup()
 	scales_.resize(vm_nb_);
 	phase_.resize(vm_nb_);
 	phase_dot_.resize(vm_nb_);
+        phase_ddot_.resize(vm_nb_);
 	det_mv_.resize(vm_nb_);
 	torque_mv_.resize(vm_nb_);
 	f_user_.resize(3);
@@ -95,6 +99,7 @@ void VfForceController::Startup()
 	scales_ .fill(0.0);
 	phase_.fill(0.0);
 	phase_dot_.fill(0.0);
+        phase_ddot_.fill(0.0);
 	det_mv_.fill(0.0);
 	torque_mv_.fill(0.0);
 	
@@ -129,8 +134,9 @@ void VfForceController::Startup()
 		rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"scales",scales_.size(),&scales_);
 		rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase",phase_.size(),&phase_);
 		rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase_dot",phase_dot_.size(),&phase_dot_);
-		rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"det_mv",det_mv_.size(),&det_mv_);
-		rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"torque_mv",torque_mv_.size(),&torque_mv_);
+                rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase_ddot",phase_ddot_.size(),&phase_ddot_);
+		//rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"det_mv",det_mv_.size(),&det_mv_);
+		//rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"torque_mv",torque_mv_.size(),&torque_mv_);
 		
  		rt_publishers_path_.AddPublisher(*ros_nh_ptr_,"robot_pos",cart_pos_status_.size(),&cart_pos_status_);
 		for(int i=0; i<vm_nb_;i++)
@@ -210,7 +216,7 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	    ModelParametersGMR* model_parameters_gmr = ModelParametersGMR::loadGMMFromMatrix(file_names[i]);
 	    fa_ptr = new FunctionApproximatorGMR(model_parameters_gmr);
 	  }
-	  
+	
 	  // MAKE SHARED POINTER
 	  fa_shr_ptr_.reset(fa_ptr);
 	  fa_vector_.push_back(fa_shr_ptr_);
@@ -284,6 +290,8 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	force_filter_node["order"] >> order;
 	force_filter_node["cutoff_freq"] >> cutoff_freq;
 	
+	force_filters_.resize(3);
+	
 	for(int i=0; i<3; i++)
 	{
 	  force_filters_[i].ReadConfig(force_filter_node);
@@ -340,6 +348,26 @@ void VfForceController::StepStatus()
 	//f_user_ = jacobian_t_pinv_ * (-1) * user_torques_;
 	
 	f_user_ = jacobian_t_pinv_ * (-1) * (torques_status_ - torques_id_);
+        
+        if (f_user_.norm() < 2.0 && f_user_.norm() > -2.0)
+        {
+            f_user_.fill(0.0);
+            for(int i=0; i<vm_nb_;i++)
+            {
+                std::cout<<"Active "<<f_user_.norm()<<std::endl;
+                vm_vector_[i]->setActive(true);
+                
+            }
+        }
+        else
+            for(int i=0; i<vm_nb_;i++)
+            {
+                std::cout<<"Deactive "<<f_user_.norm()<<std::endl;
+                vm_vector_[i]->setActive(false);
+                
+            }
+            
+        
 	
 	// Filter the user force
 	for(int i=0; i<3; i++)
@@ -359,8 +387,9 @@ void VfForceController::StepStatus()
 	  scales_(i) = 1/(vm_vector_[i]->getDistance(cart_pos_status_) + 0.001); // NOTE 0.001 it's kind of eps to avoid division by 0
 	  phase_(i) = vm_vector_[i]->getPhase();
 	  phase_dot_(i) = vm_vector_[i]->getPhaseDot();
-	  det_mv_(i) = vm_vector_[i]->getDet();
-	  torque_mv_(i) = vm_vector_[i]->getTorque();
+          phase_ddot_(i) = vm_vector_[i]->getPhaseDDot();
+	  //det_mv_(i) = vm_vector_[i]->getDet();
+	  //torque_mv_(i) = vm_vector_[i]->getTorque();
 	}
 	
 	sum_ = scales_.sum();
