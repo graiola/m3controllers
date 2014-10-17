@@ -104,6 +104,9 @@ void VfForceController::Startup()
         svd_vect_.resize(3);
         svd_.reset(new svd_t(3,Ndof_controlled_));
 	
+	// Reset force filter
+	for(int i=1; i<3; i++)
+	  force_filters_[i].Reset();
 
 #ifdef USE_ROS_RT_PUBLISHER
 	if(ros::master::check()){ 
@@ -240,12 +243,12 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	// MAKE SHARED POINTER
 	//fa_shr_ptr_.reset(fa_ptr);
 	
-	const YAML::Node& ik = doc["ik"];
+	// IK
+	const YAML::Node& ik_node = doc["ik"];
 	double damp_max, epsilon;
-	//ik["cart_mask"] >> cart_mask_str_;
-	ik["damp_max"] >> damp_max;
-	ik["epsilon"] >> epsilon;
-
+	//ik_node["cart_mask"] >> cart_mask_str_;
+	ik_node["damp_max"] >> damp_max;
+	ik_node["epsilon"] >> epsilon;
 
 	// Controller sample time
 	dt_ = 1/static_cast<double>(RT_TASK_FREQUENCY);
@@ -272,6 +275,21 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 		return false;
 	}
 
+	// FORCE FILTER
+	const YAML::Node& force_filter_node = doc["force_filter"];
+	int order;
+	double cutoff_freq;
+	//string filter_type;
+	//force_filter_node["type"] >> filter_type;
+	force_filter_node["order"] >> order;
+	force_filter_node["cutoff_freq"] >> cutoff_freq;
+	
+	for(int i=0; i<3; i++)
+	{
+	  force_filters_[i].ReadConfig(force_filter_node);
+	  force_filters_[i].GetXdf()->SetOrder(order);
+	  force_filters_[i].GetXdf()->SetCutoff_freq(cutoff_freq);
+	}
 	
 	return true;
 }
@@ -322,6 +340,13 @@ void VfForceController::StepStatus()
 	//f_user_ = jacobian_t_pinv_ * (-1) * user_torques_;
 	
 	f_user_ = jacobian_t_pinv_ * (-1) * (torques_status_ - torques_id_);
+	
+	// Filter the user force
+	for(int i=0; i<3; i++)
+	{
+	  force_filters_[i].Step(f_user_(i),0.0);
+	  f_user_(i) =  force_filters_[i].GetX();
+	}
 	
 	// Robot cart stuff
 	kin_->ComputeFk(position_status_,cart_pos_status_);
