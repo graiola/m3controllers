@@ -129,7 +129,8 @@ class VfForceController : public M3Controller
                 Eigen::VectorXd phase_ddot_;
 		Eigen::VectorXd det_mv_;
 		Eigen::VectorXd torque_mv_;
-
+		
+		std::vector<m3::M3SensorFilter> force_filters_;
 };
 
 
