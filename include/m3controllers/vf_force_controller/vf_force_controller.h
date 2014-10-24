@@ -131,6 +131,8 @@ class VfForceController : public M3Controller
 		Eigen::VectorXd torque_mv_;
 		
 		std::vector<m3::M3SensorFilter> force_filters_;
+		
+		tools::MinJerk min_jerk_scale_;
 };
 
 

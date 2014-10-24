@@ -112,6 +112,10 @@ void VfForceController::Startup()
 	// Reset force filter
 	for(int i=1; i<3; i++)
 	  force_filters_[i].Reset();
+	  
+	// Create the scale adapter
+	min_jerk_scale_.Create(0,0,0,1,0.5,1);
+	  
 
 #ifdef USE_ROS_RT_PUBLISHER
 	if(ros::master::check()){ 
@@ -349,7 +353,7 @@ void VfForceController::StepStatus()
 	
 	f_user_ = jacobian_t_pinv_ * (-1) * (torques_status_ - torques_id_);
         
-        if (f_user_.norm() < 2.0 && f_user_.norm() > -2.0)
+        /*if (f_user_.norm() < 2.0 && f_user_.norm() > -2.0)
         {
             f_user_.fill(0.0);
             for(int i=0; i<vm_nb_;i++)
@@ -365,9 +369,7 @@ void VfForceController::StepStatus()
                 std::cout<<"Deactive "<<f_user_.norm()<<std::endl;
                 vm_vector_[i]->setActive(false);
                 
-            }
-            
-        
+            }*/
 	
 	// Filter the user force
 	for(int i=0; i<3; i++)
@@ -397,10 +399,19 @@ void VfForceController::StepStatus()
 	// Compute and adapt the scales
 	for(int i=0; i<vm_nb_;i++)
 	{
-	  if(scales_(i)/sum_ > treshold_)
+	  /*if(scales_(i)/sum_ > treshold_)
 	    scales_(i) = (treshold_ - scales_(i)/sum_)/(treshold_ - 1);
 	  else
+	    scales_(i) = 0.0;*/
+	  
+	  if(scales_(i)/sum_ > treshold_)
+	  {
+	    min_jerk_scale_.Compute(scales_(i)/sum_);
+	    scales_(i) = min_jerk_scale_.GetX();
+	  }
+	   else
 	    scales_(i) = 0.0;
+	  
 	}
 	// Compute the force from the vms
 	f_vm_.fill(0.0);
