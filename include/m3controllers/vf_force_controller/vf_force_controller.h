@@ -133,6 +133,8 @@ class VfForceController : public M3Controller
                 Eigen::VectorXd fades_;
 		
 		std::vector<m3::M3SensorFilter> force_filters_;
+		
+		tools::MinJerk min_jerk_scale_;
 };
 
 
