@@ -31,6 +31,7 @@
 #include <sensor_msgs/JointState.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/WrenchStamped.h>
+#include <visualization_msgs/Marker.h>
 #include <nav_msgs/Path.h>
 #include <realtime_tools/realtime_publisher.h>
 #endif
@@ -304,6 +305,7 @@ class FileDumpers
 };
 
 #ifdef USE_ROS_RT_PUBLISHER
+
 class RealTimePublisherJoints
 {
 	public:
@@ -471,6 +473,70 @@ class RealTimePublisherWrench
 		typedef realtime_tools::RealtimePublisher<geometry_msgs::WrenchStamped> rt_publisher_t;
 		std::string topic_name_;
 		boost::shared_ptr<rt_publisher_t > pub_ptr_;
+};
+
+class RealTimePublisherMarkers
+{
+	public:
+		
+		/** Initialize the real time publisher. */
+		RealTimePublisherMarkers(const ros::NodeHandle& ros_nh, const std::string topic_name, std::string frame_id)
+		{
+			// Checks
+			//assert(msg_size > 0);
+			assert(topic_name.size() > 0);
+			
+			topic_name_ = topic_name;
+			
+			//assert(init_cond.size() >= 3);
+			pub_ptr_.reset(new rt_publisher_t(ros_nh,topic_name,10));
+			
+			pub_ptr_->msg_.header.frame_id = frame_id;
+			
+			pub_ptr_->msg_.type = visualization_msgs::Marker::SPHERE; // FIXME Hardcored sphere
+			pub_ptr_->msg_.action = visualization_msgs::Marker::ADD;
+			pub_ptr_->msg_.ns = "marker";
+			pub_ptr_->msg_.id = 0;
+			
+			pub_ptr_->msg_.color.r = 0.0;
+			pub_ptr_->msg_.color.g = 1.0;
+			pub_ptr_->msg_.color.b = 0.0;
+	  
+			//marker.pose.orientation.x = 0.0; // FIXME I can use these infos to add the covariance (rotation)
+			//marker.pose.orientation.y = 0.0;
+			//marker.pose.orientation.z = 0.0;
+			pub_ptr_->msg_.pose.orientation.w = 1.0;
+			  
+		}
+		/** Publish the topic. */
+		inline void publish(const Eigen::Ref<const Eigen::VectorXd>& in)
+		{
+			if(pub_ptr_ && pub_ptr_->trylock())
+			{ 
+				pub_ptr_->msg_.header.stamp = ros::Time::now();
+
+				// Mean
+				pub_ptr_->msg_.pose.position.x = in[0];
+				pub_ptr_->msg_.pose.position.y = in[1];
+				pub_ptr_->msg_.pose.position.z = in[2];
+				
+				// Variance
+				pub_ptr_->msg_.scale.x = in[3];
+				pub_ptr_->msg_.scale.y = in[4];
+				pub_ptr_->msg_.scale.z = in[5];
+
+				pub_ptr_->unlockAndPublish();
+			}
+		}
+		
+		inline std::string getTopic(){return topic_name_;}
+		
+	private:
+		
+		typedef realtime_tools::RealtimePublisher<visualization_msgs::Marker> rt_publisher_t;
+		std::string topic_name_;
+		boost::shared_ptr<rt_publisher_t > pub_ptr_;
+		//visualization_msgs::Marker marker_;
 };
 
 

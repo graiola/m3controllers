@@ -72,6 +72,14 @@ void VfForceController::Startup()
 	  vm_state_.push_back(vect);
 	  vm_state_dot_.push_back(vect);
 	}
+	
+	vect.resize(cart_size_*2); // NOTE dim = dim(mean) + dim(variance)
+	vect.fill(0.0);
+	for(int i=0; i<vm_nb_;i++)
+	{
+	  vm_kernel_.push_back(vect);
+	}
+	
 	for(int i=0; i<vm_nb_;i++)
         {
             vm_vector_[i]->Init();
@@ -127,18 +135,17 @@ void VfForceController::Startup()
 	  
 	  
 		boost::shared_ptr<RealTimePublisherWrench> tmp_ptr = NULL;
-		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"vm_force",root_name_);
-		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_vm_);
+		//tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"vm_force",root_name_);
+		//rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_vm_);
 		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"user_force",root_name_);
 		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_user_);
-		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"cmd_force",root_name_);
-		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_cmd_);
+		//tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"cmd_force",root_name_);
+		//rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_cmd_);
 		
-		
-		rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"scales",scales_.size(),&scales_);
-		rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase",phase_.size(),&phase_);
-		rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase_dot",phase_dot_.size(),&phase_dot_);
-                rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase_ddot",phase_ddot_.size(),&phase_ddot_);
+		//rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"scales",scales_.size(),&scales_);
+		//rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase",phase_.size(),&phase_);
+		//rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase_dot",phase_dot_.size(),&phase_dot_);
+                //rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase_ddot",phase_ddot_.size(),&phase_ddot_);
 		//rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"det_mv",det_mv_.size(),&det_mv_);
 		//rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"torque_mv",torque_mv_.size(),&torque_mv_);
 		
@@ -147,6 +154,10 @@ void VfForceController::Startup()
 		{
 		  std::string topic_name = "vm_pos_" + std::to_string(i+1);
 		  rt_publishers_path_.AddPublisher(*ros_nh_ptr_,topic_name,vm_state_[i].size(),&vm_state_[i]);
+		  
+		  topic_name = "vm_ker_" + std::to_string(i+1);
+		  boost::shared_ptr<RealTimePublisherMarkers> tmp_ptr = boost::make_shared<RealTimePublisherMarkers>(*ros_nh_ptr_,topic_name,root_name_);
+		  rt_publishers_markers_.AddPublisher(tmp_ptr,&vm_kernel_[i]);
 		}
 	}
 #endif
@@ -388,8 +399,8 @@ void VfForceController::StepStatus()
 	  vm_vector_[i]->Update(cart_pos_status_,cart_vel_status_,dt_);
 	  scales_(i) = 1/(vm_vector_[i]->getDistance(cart_pos_status_) + 0.001); // NOTE 0.001 it's kind of eps to avoid division by 0
 	  phase_(i) = vm_vector_[i]->getPhase();
-	  phase_dot_(i) = vm_vector_[i]->getPhaseDot();
-          phase_ddot_(i) = vm_vector_[i]->getPhaseDDot();
+	  //phase_dot_(i) = vm_vector_[i]->getPhaseDot();
+          //phase_ddot_(i) = vm_vector_[i]->getPhaseDDot();
 	  //det_mv_(i) = vm_vector_[i]->getDet();
 	  //torque_mv_(i) = vm_vector_[i]->getTorque();
 	}
@@ -419,6 +430,8 @@ void VfForceController::StepStatus()
 	{  
 	  vm_vector_[i]->getState(vm_state_[i]);
 	  vm_vector_[i]->getStateDot(vm_state_dot_[i]);
+	  
+	  vm_vector_[i]->getLocalKernel(vm_kernel_[i]);
 	
 	  K_ = vm_vector_[i]->getK();
 	  B_ = vm_vector_[i]->getB();
@@ -429,6 +442,7 @@ void VfForceController::StepStatus()
 	rt_publishers_path_.PublishAll();
 	rt_publishers_wrench_.PublishAll();
 	rt_publishers_values_.PublishAll();
+	rt_publishers_markers_.PublishAll();
 	
 	M3Controller::StepStatus(); // Update the status sds
 	
