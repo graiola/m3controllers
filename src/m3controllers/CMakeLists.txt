@@ -52,7 +52,7 @@ set(INCLUDE_DIRS ${INCLUDE_DIRS} ${Boost_INCLUDE_DIR})
 
 ###############################################################################
 # Find Catkin components (optionals)
-find_package(catkin COMPONENTS kdl_kinematics virtual_mechanism sensor_msgs geometry_msgs nav_msgs realtime_tools)
+find_package(catkin COMPONENTS kdl_kinematics virtual_mechanism sensor_msgs geometry_msgs nav_msgs visualization_msgs realtime_tools)
 if(realtime_tools_FOUND AND sensor_msgs_FOUND)
    add_definitions(-DUSE_ROS_RT_PUBLISHER)
 endif()

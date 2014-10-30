@@ -72,6 +72,14 @@ void VfForceController::Startup()
 	  vm_state_.push_back(vect);
 	  vm_state_dot_.push_back(vect);
 	}
+	
+	vect.resize(cart_size_*2); // NOTE dim = dim(mean) + dim(variance)
+	vect.fill(0.0);
+	for(int i=0; i<vm_nb_;i++)
+	{
+	  vm_kernel_.push_back(vect);
+	}
+	
 	for(int i=0; i<vm_nb_;i++)
         {
             vm_vector_[i]->Init();
@@ -90,6 +98,7 @@ void VfForceController::Startup()
 	det_mv_.resize(vm_nb_);
 	torque_mv_.resize(vm_nb_);
         power_mv_.resize(vm_nb_);
+        Ks_.resize(vm_nb_);
 	f_user_.resize(3);
 	f_vm_.resize(3);
 	f_cmd_.resize(3);
@@ -107,6 +116,7 @@ void VfForceController::Startup()
 	torque_mv_.fill(0.0);
         power_mv_.fill(0.0);
 	fades_.fill(0.0);
+        Ks_.fill(0.0);
         
 	treshold_ = 0.6;
 	sum_ = 1.0;
@@ -131,16 +141,17 @@ void VfForceController::Startup()
 // 		rt_publishers_.AddPublisher(*ros_nh_ptr_,"cmd_force",3,&f_cmd_);
 	  
 	  
-		/*boost::shared_ptr<RealTimePublisherWrench> tmp_ptr = NULL;
-		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"vm_force",root_name_);
-		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_vm_);
+
+		boost::shared_ptr<RealTimePublisherWrench> tmp_ptr = NULL;
+		//tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"vm_force",root_name_);
+		//rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_vm_);
 		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"user_force",root_name_);
 		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_user_);
-		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"cmd_force",root_name_);
-		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_cmd_);
-		*/
+		//tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"cmd_force",root_name_);
+		//rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_cmd_);
+		
 		rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"scales",scales_.size(),&scales_);
-                rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"fades",fades_.size(),&fades_);
+                rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"K",Ks_.size(),&Ks_);
 		//rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase",phase_.size(),&phase_);
 		//rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase_dot",phase_dot_.size(),&phase_dot_);
                 //rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase_ddot",phase_ddot_.size(),&phase_ddot_);
@@ -153,6 +164,10 @@ void VfForceController::Startup()
 		{
 		  std::string topic_name = "vm_pos_" + std::to_string(i+1);
 		  rt_publishers_path_.AddPublisher(*ros_nh_ptr_,topic_name,vm_state_[i].size(),&vm_state_[i]);
+		  
+		  topic_name = "vm_ker_" + std::to_string(i+1);
+		  boost::shared_ptr<RealTimePublisherMarkers> tmp_ptr = boost::make_shared<RealTimePublisherMarkers>(*ros_nh_ptr_,topic_name,root_name_);
+		  rt_publishers_markers_.AddPublisher(tmp_ptr,&vm_kernel_[i]);
 		}
 	}
 #endif
@@ -391,18 +406,17 @@ void VfForceController::StepStatus()
             f_user_.fill(0.0);
             for(int i=0; i<vm_nb_;i++)
             {
-                std::cout<<"Active "<<f_user_.norm()<<std::endl;
+                //std::cout<<"Active "<<f_user_.norm()<<std::endl;
                 vm_vector_[i]->setActive(true);
-                
             }
         }
         else
             for(int i=0; i<vm_nb_;i++)
             {
-                std::cout<<"Deactive "<<f_user_.norm()<<std::endl;
+                //std::cout<<"Deactive "<<f_user_.norm()<<std::endl;
                 vm_vector_[i]->setActive(false);
             }
-
+	
 
 	sum_ = scales_.sum();
 
@@ -429,9 +443,13 @@ void VfForceController::StepStatus()
 	{  
 	  vm_vector_[i]->getState(vm_state_[i]);
 	  vm_vector_[i]->getStateDot(vm_state_dot_[i]);
+	  
+	  vm_vector_[i]->getLocalKernel(vm_kernel_[i]);
 	
 	  K_ = vm_vector_[i]->getK();
 	  B_ = vm_vector_[i]->getB();
+          
+          Ks_(i) = K_;
 	  
 	  f_vm_ += scales_(i) * (K_ * (vm_state_[i] - cart_pos_status_) + B_ * (vm_state_dot_[i] - cart_vel_status_)); // Sum over all the vms
 	}
@@ -439,6 +457,7 @@ void VfForceController::StepStatus()
 	rt_publishers_path_.PublishAll();
 	//rt_publishers_wrench_.PublishAll();
 	rt_publishers_values_.PublishAll();
+	rt_publishers_markers_.PublishAll();
 	
 	M3Controller::StepStatus(); // Update the status sds
 	
