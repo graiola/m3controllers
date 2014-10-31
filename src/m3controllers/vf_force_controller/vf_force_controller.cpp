@@ -84,6 +84,7 @@ void VfForceController::Startup()
         {
             vm_vector_[i]->Init();
 	    vm_vector_[i]->setAdaptGains(adapt_gains_[i]);
+	    vm_vector_[i]->setWeightedDist(use_weighted_dist_[i]);
         }
 	
 	// User velocity, vf and joint vel commands
@@ -198,6 +199,7 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	doc["file_names"] >> file_names;
 	doc["serialized"] >> serialized;
 	doc["adapt_gains"] >> adapt_gains_;
+	doc["adapt_gains"] >> use_weighted_dist_;
 	
  	for(int i=0;i<file_names.size();i++)
 	{

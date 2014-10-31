@@ -139,6 +139,7 @@ class VfForceController : public M3Controller
 		
 		tools::MinJerk min_jerk_scale_;
 		
+		std::vector<bool> use_weighted_dist_;
 		std::vector<bool> adapt_gains_;
 };
 
