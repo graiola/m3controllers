@@ -500,13 +500,14 @@ class RealTimePublisherMarkers
 			pub_ptr_->msg_.id = 0;
 			
 			pub_ptr_->msg_.color.r = 0.0;
-			pub_ptr_->msg_.color.g = 1.0;
-			pub_ptr_->msg_.color.b = 0.0;
+			pub_ptr_->msg_.color.g = 0.0;
+			pub_ptr_->msg_.color.b = 1.0;
 	  
 			//marker.pose.orientation.x = 0.0; // FIXME I can use these infos to add the covariance (rotation)
 			//marker.pose.orientation.y = 0.0;
 			//marker.pose.orientation.z = 0.0;
 			pub_ptr_->msg_.pose.orientation.w = 1.0;
+                        pub_ptr_->msg_.color.a = 0.5;
 			  
 		}
 		/** Publish the topic. */
@@ -522,9 +523,9 @@ class RealTimePublisherMarkers
 				pub_ptr_->msg_.pose.position.z = in[2];
 				
 				// Variance
-				pub_ptr_->msg_.scale.x = in[3];
-				pub_ptr_->msg_.scale.y = in[4];
-				pub_ptr_->msg_.scale.z = in[5];
+				pub_ptr_->msg_.scale.x = 0.01 + 100 * in[3]; //* in[3];
+				pub_ptr_->msg_.scale.y = 0.01 + 100 * in[4]; // in[4];
+				pub_ptr_->msg_.scale.z = 0.01 + 100 * in[5]; //* in[5];
 
 				pub_ptr_->unlockAndPublish();
 			}

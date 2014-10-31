@@ -95,12 +95,16 @@ void VfForceController::Startup()
 	phase_.resize(vm_nb_);
 	phase_dot_.resize(vm_nb_);
         phase_ddot_.resize(vm_nb_);
+        fades_.resize(vm_nb_);
 	det_mv_.resize(vm_nb_);
 	torque_mv_.resize(vm_nb_);
+        power_mv_.resize(vm_nb_);
+        Ks_.resize(vm_nb_);
 	f_user_.resize(3);
 	f_vm_.resize(3);
 	f_cmd_.resize(3);
-	
+       
+
 	// Clear
 	f_user_.fill(0.0);
 	f_vm_.fill(0.0);
@@ -111,7 +115,10 @@ void VfForceController::Startup()
         phase_ddot_.fill(0.0);
 	det_mv_.fill(0.0);
 	torque_mv_.fill(0.0);
-	
+        power_mv_.fill(0.0);
+	fades_.fill(0.0);
+        Ks_.fill(0.0);
+        
 	treshold_ = 0.6;
 	sum_ = 1.0;
         
@@ -123,7 +130,7 @@ void VfForceController::Startup()
 	  force_filters_[i].Reset();
 	  
 	// Create the scale adapter
-	min_jerk_scale_.Create(0,0,0,1,0.5,1);
+	min_jerk_scale_.Create(0,0,0,1,treshold_,0.9);
 	  
 
 #ifdef USE_ROS_RT_PUBLISHER
@@ -135,6 +142,7 @@ void VfForceController::Startup()
 // 		rt_publishers_.AddPublisher(*ros_nh_ptr_,"cmd_force",3,&f_cmd_);
 	  
 	  
+
 		boost::shared_ptr<RealTimePublisherWrench> tmp_ptr = NULL;
 		//tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"vm_force",root_name_);
 		//rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_vm_);
@@ -143,12 +151,14 @@ void VfForceController::Startup()
 		//tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"cmd_force",root_name_);
 		//rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_cmd_);
 		
-		//rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"scales",scales_.size(),&scales_);
+		rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"scales",scales_.size(),&scales_);
+                rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"K",Ks_.size(),&Ks_);
 		//rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase",phase_.size(),&phase_);
 		//rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase_dot",phase_dot_.size(),&phase_dot_);
                 //rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase_ddot",phase_ddot_.size(),&phase_ddot_);
 		//rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"det_mv",det_mv_.size(),&det_mv_);
 		//rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"torque_mv",torque_mv_.size(),&torque_mv_);
+		//rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"power_mv",power_mv_.size(),&power_mv_);
 		
  		rt_publishers_path_.AddPublisher(*ros_nh_ptr_,"robot_pos",cart_pos_status_.size(),&cart_pos_status_);
 		for(int i=0; i<vm_nb_;i++)
@@ -218,7 +228,7 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	    
 	    // MAKE THE FUNCTION APPROXIMATORS
 	    int input_dim = 1;
-	    int n_basis_functions = 25;
+	    int n_basis_functions = 6;
 	    
 	    // GMR
 	    MetaParametersGMR* meta_parameters_gmr = new MetaParametersGMR(input_dim,n_basis_functions);
@@ -364,33 +374,6 @@ void VfForceController::StepStatus()
 
 	//f_user_ = jacobian_t_pinv_ * (-1) * user_torques_;
 	
-	f_user_ = jacobian_t_pinv_ * (-1) * (torques_status_ - torques_id_);
-        
-        /*if (f_user_.norm() < 2.0 && f_user_.norm() > -2.0)
-        {
-            f_user_.fill(0.0);
-            for(int i=0; i<vm_nb_;i++)
-            {
-                std::cout<<"Active "<<f_user_.norm()<<std::endl;
-                vm_vector_[i]->setActive(true);
-                
-            }
-        }
-        else
-            for(int i=0; i<vm_nb_;i++)
-            {
-                std::cout<<"Deactive "<<f_user_.norm()<<std::endl;
-                vm_vector_[i]->setActive(false);
-                
-            }*/
-	
-	// Filter the user force
-	for(int i=0; i<3; i++)
-	{
-	  force_filters_[i].Step(f_user_(i),0.0);
-	  f_user_(i) =  force_filters_[i].GetX();
-	}
-	
 	// Robot cart stuff
 	kin_->ComputeFk(position_status_,cart_pos_status_);
 	kin_->ComputeFkDot(position_status_,velocity_status_,cart_vel_status_);
@@ -400,13 +383,43 @@ void VfForceController::StepStatus()
 	{
 	  vm_vector_[i]->Update(cart_pos_status_,cart_vel_status_,dt_);
 	  scales_(i) = 1/(vm_vector_[i]->getDistance(cart_pos_status_) + 0.001); // NOTE 0.001 it's kind of eps to avoid division by 0
-	  phase_(i) = vm_vector_[i]->getPhase();
+          fades_(i) = vm_vector_[i]->getFade();
+	  //phase_(i) = vm_vector_[i]->getPhase();
 	  //phase_dot_(i) = vm_vector_[i]->getPhaseDot();
           //phase_ddot_(i) = vm_vector_[i]->getPhaseDDot();
 	  //det_mv_(i) = vm_vector_[i]->getDet();
 	  //torque_mv_(i) = vm_vector_[i]->getTorque();
+          //power_mv_(i) = torque_mv_(i)*phase_dot_(i);
 	}
 	
+	//std::cout<<"P "<<torque_mv_(0)*phase_dot_(0)<<std::endl;
+	
+	f_user_ = jacobian_t_pinv_ * (-1) * (torques_status_ - torques_id_);
+        
+        // Filter the user force
+        for(int i=0; i<3; i++)
+        {
+          force_filters_[i].Step(f_user_(i),0.0);
+          f_user_(i) =  force_filters_[i].GetX();
+        }
+        
+        if (f_user_.norm() < 2.0 && f_user_.norm() > -2.0)
+        {
+            f_user_.fill(0.0);
+            for(int i=0; i<vm_nb_;i++)
+            {
+                //std::cout<<"Active "<<f_user_.norm()<<std::endl;
+                vm_vector_[i]->setActive(true);
+            }
+        }
+        else
+            for(int i=0; i<vm_nb_;i++)
+            {
+                //std::cout<<"Deactive "<<f_user_.norm()<<std::endl;
+                vm_vector_[i]->setActive(false);
+            }
+	
+
 	sum_ = scales_.sum();
 
 	// Compute and adapt the scales
@@ -417,7 +430,7 @@ void VfForceController::StepStatus()
 	  else
 	    scales_(i) = 0.0;*/
 	  
-	  if(scales_(i)/sum_ > treshold_)
+ 	  if(scales_(i)/sum_ > treshold_)
 	  {
 	    min_jerk_scale_.Compute(scales_(i)/sum_);
 	    scales_(i) = min_jerk_scale_.GetX();
@@ -437,12 +450,14 @@ void VfForceController::StepStatus()
 	
 	  K_ = vm_vector_[i]->getK();
 	  B_ = vm_vector_[i]->getB();
+          
+          Ks_(i) = K_;
 	  
 	  f_vm_ += scales_(i) * (K_ * (vm_state_[i] - cart_pos_status_) + B_ * (vm_state_dot_[i] - cart_vel_status_)); // Sum over all the vms
 	}
 	
 	rt_publishers_path_.PublishAll();
-	rt_publishers_wrench_.PublishAll();
+	//rt_publishers_wrench_.PublishAll();
 	rt_publishers_values_.PublishAll();
 	rt_publishers_markers_.PublishAll();
 	
@@ -468,7 +483,6 @@ void VfForceController::StepCommand()
         jacobian_t_reduced_.row(2) = jacobian_t_.row(2);
         jacobian_t_reduced_.row(3) = jacobian_t_.row(3);
 
-        
         torques_cmd_ = jacobian_t_reduced_ * f_cmd_;
         
         //torques_cmd_ = jacobian_t_ * f_cmd_;

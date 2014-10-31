@@ -114,6 +114,7 @@ class VfForceController : public M3Controller
 		
 		int cart_size_;
 		double treshold_;
+                Eigen::VectorXd Ks_;
 		Eigen::VectorXd scales_;
                 Eigen::VectorXd svd_vect_;
                 boost::shared_ptr<svd_t> svd_;
@@ -131,6 +132,8 @@ class VfForceController : public M3Controller
                 Eigen::VectorXd phase_ddot_;
 		Eigen::VectorXd det_mv_;
 		Eigen::VectorXd torque_mv_;
+                Eigen::VectorXd power_mv_;
+                Eigen::VectorXd fades_;
 		
 		std::vector<m3::M3SensorFilter> force_filters_;
 		
