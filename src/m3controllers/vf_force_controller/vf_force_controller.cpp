@@ -455,7 +455,7 @@ void VfForceController::StepStatus()
 	}
 	
 	rt_publishers_path_.PublishAll();
-	//rt_publishers_wrench_.PublishAll();
+	rt_publishers_wrench_.PublishAll();
 	rt_publishers_values_.PublishAll();
 	rt_publishers_markers_.PublishAll();
 	

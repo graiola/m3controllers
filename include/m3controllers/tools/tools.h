@@ -522,9 +522,9 @@ class RealTimePublisherMarkers
 				pub_ptr_->msg_.pose.position.z = in[2];
 				
 				// Variance
-				pub_ptr_->msg_.scale.x = 0.01 + 100 * in[3]; //* in[3];
-				pub_ptr_->msg_.scale.y = 0.01 + 100 * in[4]; // in[4];
-				pub_ptr_->msg_.scale.z = 0.01 + 100 * in[5]; //* in[5];
+				pub_ptr_->msg_.scale.x = 0.01 + 200 * in[3]; //* in[3];
+				pub_ptr_->msg_.scale.y = 0.01 + 200 * in[4]; // in[4];
+				pub_ptr_->msg_.scale.z = 0.01 + 200 * in[5]; //* in[5];
 
 				pub_ptr_->unlockAndPublish();
 			}
