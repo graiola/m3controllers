@@ -138,6 +138,8 @@ class VfForceController : public M3Controller
 		std::vector<m3::M3SensorFilter> force_filters_;
 		
 		tools::MinJerk min_jerk_scale_;
+		
+		std::vector<bool> adapt_gains_;
 };
 
 

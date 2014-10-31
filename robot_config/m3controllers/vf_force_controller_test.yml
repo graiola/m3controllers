@@ -7,6 +7,7 @@ controller_type: pos
 dynamic: m3dynamatics_right_arm_test
 file_names: ['/home/meka/m3controllers/data/gmm_3.txt']  #['/home/meka/m3controllers/data/exp_2_kernels_2_goals/gmm_1.txt','/home/meka/m3controllers/data/exp_2_kernels_2_goals/gmm_2.txt']
 serialized: true
+adapt_gains: [false,false]
 ik:
   damp_max: 0.8
   epsilon: 0.1
@@ -15,4 +16,3 @@ force_filter:
   cutoff_freq: 80
   order: 3
   type: diff_butterworth
-
