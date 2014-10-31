@@ -75,14 +75,14 @@ class MinJerk
 {
 	public:
 		MinJerk():x(0),v(0),p(0),j(0){}
-		inline mReal GetX() const {return x;}
-		inline mReal GetXDot() const {return v;}
-		inline mReal GetXDotDot() const {return p;}
-		inline mReal GetXDotDotDot() const {return j;}
+		inline double GetX() const {return x;}
+		inline double GetXDot() const {return v;}
+		inline double GetXDotDot() const {return p;}
+		inline double GetXDotDotDot() const {return j;}
 		
-		inline void Compute(mReal t)
+		inline void Compute(const double& t)
 		{
-		    mReal tau=(t-t0)/D;
+		    tau=(t-t0)/D;
 		    
 		    if (tau>1.0)
 		    {
@@ -116,7 +116,7 @@ class MinJerk
 			    60*a5*pow(tau,2)/pow(D,3);
 		}
 		
-		inline void Create(mReal mxi,mReal mvi,mReal mpi,mReal mxf,mReal mt0,mReal mtf)
+		inline void Create(double mxi,double mvi,double mpi,double mxf,double mt0,double mtf)
 		{
 		    t0=mt0;
 		    tf=mtf;
@@ -142,9 +142,10 @@ class MinJerk
 		}
 		
 	private:
-		mReal t0,tf,xf,D,a0,a1,a2,a3,a4,a5;
-		mReal x,v,p,j;
-};
+		double t0,tf,xf,D,a0,a1,a2,a3,a4,a5;
+		double x,v,p,j;
+		double tau;
+};  
 
 template<typename value_t>
 void ReadTxtFile(const char* filename,std::vector<std::vector<value_t> >& values ) {
