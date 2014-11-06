@@ -133,6 +133,12 @@ void VfForceController::Startup()
 	// Create the scale adapter
 	min_jerk_scale_.Create(0,0,0,1,treshold_,0.9);
 	  
+	// Inverse kinematics pre-allocations
+	svd_->compute(jacobian_t_, ComputeThinU | ComputeThinV); // This is not rt safe! We trigger it here to pre-allocate the internal variables
+	matrixU_t_.resize(3,3);
+	matrixV_.resize(Ndof_controlled_,3);
+	jacobian_t_pinv_tmp_.resize(Ndof_controlled_,3);
+	f_user_tmp_.resize(3);
 
 #ifdef USE_ROS_RT_PUBLISHER
 	if(ros::master::check()){ 
@@ -333,7 +339,7 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 
 void VfForceController::StepStatus()
 {
-	
+	//Eigen::internal::set_is_malloc_allowed(false);
         SAVE_TIME(start_dt_status_);
   
 	M3Controller::StepMotorsStatus(); // Read the joints status from motors
@@ -357,7 +363,6 @@ void VfForceController::StepStatus()
 	jacobian_t_= jacobian_.transpose();
 	
 	//jacobian_.transposeInPlace(); //NOTE No rt safe!!! http://eigen.tuxfamily.org/dox-devel/classEigen_1_1DenseBase.html#ac501bd942994af7a95d95bee7a16ad2a
-	
 	// IK
 	//Eigen::JacobiSVD<Eigen::MatrixXd> svd;
 	svd_->compute(jacobian_t_, ComputeThinU | ComputeThinV);
@@ -371,7 +376,14 @@ void VfForceController::StepStatus()
 		damp = std::exp(-4/epsilon*svd_vect_[i])*damp_max;
 		svd_vect_[i] = svd_curr/(svd_curr*svd_curr+damp*damp);
 	}
-	jacobian_t_pinv_ = svd_->matrixV() * svd_vect_.asDiagonal() * svd_->matrixU().transpose();
+	
+	matrixU_t_ = svd_->matrixU().transpose();
+	matrixV_ = svd_->matrixV();
+	
+	jacobian_t_pinv_tmp_ = svd_->matrixV() * svd_vect_.asDiagonal();
+	jacobian_t_pinv_.noalias() = jacobian_t_pinv_tmp_ * matrixU_t_; // NOTE .noalias() does the trick
+	
+	//jacobian_t_pinv_ = svd_->matrixV() * svd_vect_.asDiagonal() * svd_->matrixU().transpose();
 	// END IK
 
 	//f_user_ = jacobian_t_pinv_ * (-1) * user_torques_;
@@ -396,8 +408,10 @@ void VfForceController::StepStatus()
 	
 	//std::cout<<"P "<<torque_mv_(0)*phase_dot_(0)<<std::endl;
 	
-	f_user_ = jacobian_t_pinv_ * (-1) * (torques_status_ - torques_id_);
-        
+	f_user_tmp_ = torques_status_ - torques_id_;
+        f_user_.noalias() = jacobian_t_pinv_ * (-1) * f_user_tmp_;
+	
+	
         // Filter the user force
         for(int i=0; i<3; i++)
         {
@@ -467,12 +481,12 @@ void VfForceController::StepStatus()
 	
 	SAVE_TIME(end_dt_status_);
         PRINT_TIME(start_dt_status_,end_dt_status_,tmp_dt_status_,"status");
-	
+	//Eigen::internal::set_is_malloc_allowed(true);
 }
 
 void VfForceController::StepCommand()
 {	
-  
+	//Eigen::internal::set_is_malloc_allowed(false);
         SAVE_TIME(start_dt_cmd_);
   
 	M3Controller::StepCommand(); // Update the command sds
@@ -529,7 +543,7 @@ void VfForceController::StepCommand()
 
 	SAVE_TIME(end_dt_cmd_);
         PRINT_TIME(start_dt_cmd_,end_dt_cmd_,tmp_dt_cmd_,"cmd");
-	
+	//Eigen::internal::set_is_malloc_allowed(true);
 	
 	
 }
