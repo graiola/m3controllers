@@ -141,6 +141,11 @@ class VfForceController : public M3Controller
 		
 		std::vector<bool> use_weighted_dist_;
 		std::vector<bool> adapt_gains_;
+		
+		Eigen::MatrixXd matrixU_t_;
+		Eigen::MatrixXd matrixV_;
+		Eigen::MatrixXd jacobian_t_pinv_tmp_;
+		Eigen::VectorXd f_user_tmp_;
 };
 
 

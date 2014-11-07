@@ -1,6 +1,8 @@
 #ifndef M3_CONTROLLER_H
 #define M3_CONTROLLER_H
 
+//#define EIGEN_RUNTIME_NO_MALLOC
+
 ////////// M3
 #include <m3/chains/arm.h>
 #include <m3/robots/humanoid.h>
