@@ -120,7 +120,7 @@ void VfForceController::Startup()
 	fades_.fill(0.0);
         Ks_.fill(0.0);
         
-	treshold_ = 0.6;
+	treshold_ = 1/vm_nb_ + 0.1;
 	sum_ = 1.0;
         
         svd_vect_.resize(3);
@@ -445,15 +445,13 @@ void VfForceController::StepStatus()
 	    scales_(i) = (treshold_ - scales_(i)/sum_)/(treshold_ - 1);
 	  else
 	    scales_(i) = 0.0;*/
-	  
- 	  if(scales_(i)/sum_ > treshold_)
+          if(scales_(i)/sum_ > treshold_)
 	  {
 	    min_jerk_scale_.Compute(scales_(i)/sum_);
 	    scales_(i) = min_jerk_scale_.GetX();
 	  }
 	   else
 	    scales_(i) = 0.0;
-	  
 	}
 	// Compute the force from the vms
 	f_vm_.fill(0.0);
