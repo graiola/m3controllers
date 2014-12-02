@@ -120,7 +120,8 @@ void VfForceController::Startup()
 	fades_.fill(0.0);
         Ks_.fill(0.0);
         
-	treshold_ = 1/vm_nb_ + 0.1;
+	treshold_ = 1.0/vm_nb_ + 0.1;
+        
 	sum_ = 1.0;
         
         svd_vect_.resize(3);
@@ -419,7 +420,8 @@ void VfForceController::StepStatus()
           f_user_(i) =  force_filters_[i].GetX();
         }
         
-        if (f_user_.norm() < 2.0 && f_user_.norm() > -2.0)
+        //if (f_user_.norm() < 2.0 && f_user_.norm() > -2.0)
+        if (f_user_.norm() < 4.0 && f_user_.norm() > -4.0)
         {
             f_user_.fill(0.0);
             for(int i=0; i<vm_nb_;i++)
