@@ -43,6 +43,7 @@ void VfForceController::Startup()
         torques_status_.resize(Ndof_controlled_);
         position_status_.resize(Ndof_controlled_);
         velocity_status_.resize(Ndof_controlled_);
+        
 	// Clear
 	torques_id_.fill(0.0);
 	user_torques_.fill(0.0);
@@ -139,7 +140,7 @@ void VfForceController::Startup()
 	matrixU_t_.resize(3,3);
 	matrixV_.resize(Ndof_controlled_,3);
 	jacobian_t_pinv_tmp_.resize(Ndof_controlled_,3);
-	f_user_tmp_.resize(3);
+	
 
 #ifdef USE_ROS_RT_PUBLISHER
 	if(ros::master::check()){ 
@@ -152,16 +153,16 @@ void VfForceController::Startup()
 	  
 
 		boost::shared_ptr<RealTimePublisherWrench> tmp_ptr = NULL;
-		//tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"vm_force",root_name_);
-		//rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_vm_);
+		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"vm_force",root_name_);
+		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_vm_);
 		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"user_force",root_name_);
 		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_user_);
-		//tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"cmd_force",root_name_);
-		//rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_cmd_);
+		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"cmd_force",root_name_);
+		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_cmd_);
 		
 		rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"scales",scales_.size(),&scales_);
                 rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"K",Ks_.size(),&Ks_);
-		//rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase",phase_.size(),&phase_);
+		rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase",phase_.size(),&phase_);
 		//rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase_dot",phase_dot_.size(),&phase_dot_);
                 //rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase_ddot",phase_ddot_.size(),&phase_ddot_);
 		//rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"det_mv",det_mv_.size(),&det_mv_);
@@ -399,7 +400,7 @@ void VfForceController::StepStatus()
 	  vm_vector_[i]->Update(cart_pos_status_,cart_vel_status_,dt_);
 	  scales_(i) = 1/(vm_vector_[i]->getDistance(cart_pos_status_) + 0.001); // NOTE 0.001 it's kind of eps to avoid division by 0
           fades_(i) = vm_vector_[i]->getFade();
-	  //phase_(i) = vm_vector_[i]->getPhase();
+	  phase_(i) = vm_vector_[i]->getPhase();
 	  //phase_dot_(i) = vm_vector_[i]->getPhaseDot();
           //phase_ddot_(i) = vm_vector_[i]->getPhaseDDot();
 	  //det_mv_(i) = vm_vector_[i]->getDet();
@@ -409,8 +410,10 @@ void VfForceController::StepStatus()
 	
 	//std::cout<<"P "<<torque_mv_(0)*phase_dot_(0)<<std::endl;
 	
-	f_user_tmp_ = torques_status_ - torques_id_;
-        f_user_.noalias() = jacobian_t_pinv_ * (-1) * f_user_tmp_;
+
+	user_torques_ = torques_status_ - torques_id_;
+
+        f_user_.noalias() = jacobian_t_pinv_ * (-1) * user_torques_;
 	
 	
         // Filter the user force
@@ -539,6 +542,17 @@ void VfForceController::StepCommand()
                       bot_->SetThetaDeg(chain_,i,0.0);
                    }
                    
+          }
+          else
+          {
+               bot_->SetMotorPowerOn();
+               for(int i=0;i<7;i++)
+                   {
+                      bot_->SetStiffness(chain_,i,1.0);
+                      bot_->SetSlewRateProportional(chain_,i,1.0);
+                      bot_->SetModeTorqueGc(chain_,i);
+                      bot_->SetThetaDeg(chain_,i,user_torques_[i]);
+                   }
           }
 
 	SAVE_TIME(end_dt_cmd_);
