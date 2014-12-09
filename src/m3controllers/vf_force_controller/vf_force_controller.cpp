@@ -121,7 +121,10 @@ void VfForceController::Startup()
 	fades_.fill(0.0);
         Ks_.fill(0.0);
         
-	treshold_ = 1.0/vm_nb_ + 0.1;
+        if (vm_nb_ > 1)
+            treshold_ = 1.0/vm_nb_ + 0.1;
+        else
+            treshold_ = 0.0;
         
 	sum_ = 1.0;
         
@@ -543,17 +546,17 @@ void VfForceController::StepCommand()
                    }
                    
           }
-          else
+          /*else
           {
                bot_->SetMotorPowerOn();
                for(int i=0;i<7;i++)
                    {
-                      bot_->SetStiffness(chain_,i,1.0);
+                      bot_->SetStiffness(chain_,i,0.0);
                       bot_->SetSlewRateProportional(chain_,i,1.0);
                       bot_->SetModeTorqueGc(chain_,i);
-                      bot_->SetThetaDeg(chain_,i,user_torques_[i]);
+                      //bot_->SetTorque_mNm(chain_,i,m2mm(user_torques_[i]));
                    }
-          }
+          }*/
 
 	SAVE_TIME(end_dt_cmd_);
         PRINT_TIME(start_dt_cmd_,end_dt_cmd_,tmp_dt_cmd_,"cmd");
