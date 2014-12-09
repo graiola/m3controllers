@@ -398,7 +398,7 @@ void VfForceController::StepStatus()
 	for(int i=0; i<vm_nb_;i++)
 	{
 	  vm_vector_[i]->Update(cart_pos_status_,cart_vel_status_,dt_);
-	  scales_(i) = 1/(vm_vector_[i]->getDistance(cart_pos_status_) + 0.001); // NOTE 0.001 it's kind of eps to avoid division by 0
+	  scales_(i) = vm_vector_[i]->getProbability(cart_pos_status_); //1/(vm_vector_[i]->getDistance(cart_pos_status_) + 0.001); // NOTE 0.001 it's kind of eps to avoid division by 0
           fades_(i) = vm_vector_[i]->getFade();
 	  phase_(i) = vm_vector_[i]->getPhase();
 	  //phase_dot_(i) = vm_vector_[i]->getPhaseDot();
