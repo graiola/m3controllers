@@ -206,11 +206,22 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 
 	// RETRAIN THE DATA FROM TXT FILE
 	std::vector<std::string> file_names;
+	std::string prob_mode_string;
 	bool serialized;
 	doc["file_names"] >> file_names;
 	doc["serialized"] >> serialized;
 	doc["adapt_gains"] >> adapt_gains_;
 	doc["adapt_gains"] >> use_weighted_dist_;
+	doc["prob_mode"] >> prob_mode_string;
+	
+	if (prob_mode_string == "scaled")
+	  prob_mode_ = SCALED;
+	else if (prob_mode_string == "conditional")
+	  prob_mode_ = CONDITIONAL;
+	else if (prob_mode_string == "priors")
+	  prob_mode_ = PRIORS;
+	else
+	   prob_mode_ = SCALED; // Default
 	
  	for(int i=0;i<file_names.size();i++)
 	{
@@ -401,7 +412,22 @@ void VfForceController::StepStatus()
 	for(int i=0; i<vm_nb_;i++)
 	{
 	  vm_vector_[i]->Update(cart_pos_status_,cart_vel_status_,dt_);
-	  scales_(i) = vm_vector_[i]->getProbability(cart_pos_status_); //1/(vm_vector_[i]->getDistance(cart_pos_status_) + 0.001); // NOTE 0.001 it's kind of eps to avoid division by 0
+	  
+	  switch(prob_mode_) 
+	  {
+	    case SCALED:
+	      scales_(i) = 1/(vm_vector_[i]->getDistance(cart_pos_status_) + 0.001); // NOTE 0.001 it's kind of eps to avoid division by 0
+	      break;
+	    case CONDITIONAL:
+	      scales_(i) = vm_vector_[i]->getProbability(cart_pos_status_);
+	      break;
+	    case PRIORS:
+	      scales_(i) = std::exp(-vm_vector_[i]->getDistance(cart_pos_status_));
+	      break;
+	    default:
+	      break;
+	  }
+	    
           fades_(i) = vm_vector_[i]->getFade();
 	  phase_(i) = vm_vector_[i]->getPhase();
 	  //phase_dot_(i) = vm_vector_[i]->getPhaseDot();
@@ -448,20 +474,33 @@ void VfForceController::StepStatus()
 	// Compute and adapt the scales
 	for(int i=0; i<vm_nb_;i++)
 	{
-	  /*if(scales_(i)/sum_ > treshold_)
-	    scales_(i) = (treshold_ - scales_(i)/sum_)/(treshold_ - 1);
-	  else
-	    scales_(i) = 0.0;*/
-          /*if(scales_(i)/sum_ > treshold_)
+	  switch(prob_mode_) 
 	  {
-	    min_jerk_scale_.Compute(scales_(i)/sum_);
-	    scales_(i) = min_jerk_scale_.GetX();
+	    case SCALED:
+	      // Minjerk scaling
+	      if(scales_(i)/sum_ > treshold_)
+	      {
+		min_jerk_scale_.Compute(scales_(i)/sum_);
+		scales_(i) = min_jerk_scale_.GetX();
+	      }
+	      else
+		scales_(i) = 0.0;
+	      // Linear scaling
+	      /*if(scales_(i)/sum_ > treshold_)
+		scales_(i) = (treshold_ - scales_(i)/sum_)/(treshold_ - 1);
+	      else
+		scales_(i) = 0.0;*/
+	      break;
+	    case CONDITIONAL:
+	      scales_(i) =  scales_(i)/sum_;
+	      break;
+	    case PRIORS:
+	      scales_(i) = scales_(i);
+	      break;
+	    default:
+	      break;
 	  }
-	   else
-	    scales_(i) = 0.0;*/
-          
-           scales_(i) =  scales_(i)/sum_;
-          
+
 	}
 	// Compute the force from the vms
 	f_vm_.fill(0.0);
