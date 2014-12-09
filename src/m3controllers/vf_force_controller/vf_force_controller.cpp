@@ -412,7 +412,6 @@ void VfForceController::StepStatus()
 	}
 	
 	//std::cout<<"P "<<torque_mv_(0)*phase_dot_(0)<<std::endl;
-	
 
 	user_torques_ = torques_status_ - torques_id_;
 
@@ -453,13 +452,16 @@ void VfForceController::StepStatus()
 	    scales_(i) = (treshold_ - scales_(i)/sum_)/(treshold_ - 1);
 	  else
 	    scales_(i) = 0.0;*/
-          if(scales_(i)/sum_ > treshold_)
+          /*if(scales_(i)/sum_ > treshold_)
 	  {
 	    min_jerk_scale_.Compute(scales_(i)/sum_);
 	    scales_(i) = min_jerk_scale_.GetX();
 	  }
 	   else
-	    scales_(i) = 0.0;
+	    scales_(i) = 0.0;*/
+          
+           scales_(i) =  scales_(i)/sum_;
+          
 	}
 	// Compute the force from the vms
 	f_vm_.fill(0.0);
