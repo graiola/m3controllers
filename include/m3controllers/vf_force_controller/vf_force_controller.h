@@ -74,7 +74,7 @@ class VfForceController : public M3Controller
 	private:
 		enum {DEFAULT};
 
-		enum prob_mode_t {SCALED,CONDITIONAL,PRIORS};
+		enum prob_mode_t {SCALED,CONDITIONAL,PRIORS,MIX};
 		prob_mode_t prob_mode_;
 		
 		tools::RealTimePublishers<tools::RealTimePublisherPath> rt_publishers_path_;

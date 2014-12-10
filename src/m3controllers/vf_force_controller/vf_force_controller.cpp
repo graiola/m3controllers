@@ -220,6 +220,8 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	  prob_mode_ = CONDITIONAL;
 	else if (prob_mode_string == "priors")
 	  prob_mode_ = PRIORS;
+	else if (prob_mode_string == "mix")
+	  prob_mode_ = MIX;
 	else
 	   prob_mode_ = SCALED; // Default
 	
@@ -424,6 +426,9 @@ void VfForceController::StepStatus()
 	    case PRIORS:
 	      scales_(i) = std::exp(-vm_vector_[i]->getDistance(cart_pos_status_));
 	      break;
+	    case MIX:
+	      scales_(i) = vm_vector_[i]->getProbability(cart_pos_status_);
+	      break;
 	    default:
 	      break;
 	  }
@@ -496,6 +501,9 @@ void VfForceController::StepStatus()
 	      break;
 	    case PRIORS:
 	      scales_(i) = scales_(i);
+	      break;
+	     case MIX:
+	      scales_(i) = std::exp(-6*vm_vector_[i]->getDistance(cart_pos_status_)) * scales_(i)/sum_;
 	      break;
 	    default:
 	      break;
