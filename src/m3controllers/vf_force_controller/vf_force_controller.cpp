@@ -424,7 +424,7 @@ void VfForceController::StepStatus()
 	      scales_(i) = vm_vector_[i]->getProbability(cart_pos_status_);
 	      break;
 	    case PRIORS:
-	      scales_(i) = std::exp(-vm_vector_[i]->getDistance(cart_pos_status_));
+	      scales_(i) = std::exp(-10*vm_vector_[i]->getDistance(cart_pos_status_));
 	      break;
 	    case MIX:
 	      scales_(i) = vm_vector_[i]->getProbability(cart_pos_status_);
@@ -447,7 +447,6 @@ void VfForceController::StepStatus()
 	user_torques_ = torques_status_ - torques_id_;
 
         f_user_.noalias() = jacobian_t_pinv_ * (-1) * user_torques_;
-	
 	
         // Filter the user force
         for(int i=0; i<3; i++)
@@ -503,7 +502,7 @@ void VfForceController::StepStatus()
 	      scales_(i) = scales_(i);
 	      break;
 	     case MIX:
-	      scales_(i) = std::exp(-6*vm_vector_[i]->getDistance(cart_pos_status_)) * scales_(i)/sum_;
+	      scales_(i) = std::exp(-10*vm_vector_[i]->getDistance(cart_pos_status_)) * scales_(i)/sum_;
 	      break;
 	    default:
 	      break;
@@ -546,8 +545,10 @@ void VfForceController::StepCommand()
   
 	M3Controller::StepCommand(); // Update the command sds
 	
-	f_cmd_ = f_vm_ + f_user_;
+	//f_cmd_ = f_vm_ + f_user_;
 
+        f_cmd_ = f_vm_;
+        
          //for(int i=0;i<Ndof_controlled_;i++)
         jacobian_t_reduced_.row(0) = jacobian_t_.row(0);
         jacobian_t_reduced_.row(1) = jacobian_t_.row(1);
@@ -595,7 +596,7 @@ void VfForceController::StepCommand()
                    }
                    
           }
-          /*else
+          else
           {
                bot_->SetMotorPowerOn();
                for(int i=0;i<7;i++)
@@ -605,7 +606,7 @@ void VfForceController::StepCommand()
                       bot_->SetModeTorqueGc(chain_,i);
                       //bot_->SetTorque_mNm(chain_,i,m2mm(user_torques_[i]));
                    }
-          }*/
+          }
 
 	SAVE_TIME(end_dt_cmd_);
         PRINT_TIME(start_dt_cmd_,end_dt_cmd_,tmp_dt_cmd_,"cmd");
