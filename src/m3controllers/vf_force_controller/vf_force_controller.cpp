@@ -386,7 +386,7 @@ void VfForceController::StepStatus()
 	svd_->compute(jacobian_t_, ComputeThinU | ComputeThinV);
 	//Eigen::VectorXd svd_vect = svd.singularValues();
         svd_vect_ = svd_->singularValues();
-	damp_max = 0.0;
+	damp_max = 0.001;
 	epsilon = 0.01;
 	for (int i = 0; i < svd_vect_.size(); i++)
 	{
