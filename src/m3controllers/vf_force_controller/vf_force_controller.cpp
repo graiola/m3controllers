@@ -72,6 +72,7 @@ void VfForceController::Startup()
 	  vm_vector_ .push_back(new VirtualMechanismGmr(cart_size_,fa_vector_[i]));
 	  vm_state_.push_back(vect);
 	  vm_state_dot_.push_back(vect);
+          errors_.push_back(vect);
 	}
 	
 	vect.resize(cart_size_*2); // NOTE dim = dim(mean) + dim(variance)
@@ -177,6 +178,9 @@ void VfForceController::Startup()
 		{
 		  std::string topic_name = "vm_pos_" + std::to_string(i+1);
 		  rt_publishers_path_.AddPublisher(*ros_nh_ptr_,topic_name,vm_state_[i].size(),&vm_state_[i]);
+                  
+                  topic_name = "error_" + std::to_string(i+1);
+                  rt_publishers_values_.AddPublisher(*ros_nh_ptr_,topic_name,errors_[i].size(),&errors_[i]);
 		  
 		  topic_name = "vm_ker_" + std::to_string(i+1);
 		  boost::shared_ptr<RealTimePublisherMarkers> tmp_ptr = boost::make_shared<RealTimePublisherMarkers>(*ros_nh_ptr_,topic_name,root_name_);
@@ -523,6 +527,8 @@ void VfForceController::StepStatus()
           
           Ks_(i) = K_;
 	  
+          errors_[i] = (vm_state_[i] - cart_pos_status_);
+          
 	  f_vm_ += scales_(i) * (K_ * (vm_state_[i] - cart_pos_status_) + B_ * (vm_state_dot_[i] - cart_vel_status_)); // Sum over all the vms
 	}
 	
@@ -581,20 +587,18 @@ void VfForceController::StepCommand()
               bot_->SetMotorPowerOn();
                    for(int i=0;i<4;i++)
                    {
-                    bot_->SetStiffness(chain_,i,1.0);
-                    bot_->SetSlewRateProportional(chain_,i,1.0);
-                    bot_->SetModeTorqueGc(chain_,i);
-                    bot_->SetTorque_mNm(chain_,i,m2mm(torques_cmd_[i]));
+                        bot_->SetStiffness(chain_,i,1.0);
+                        bot_->SetSlewRateProportional(chain_,i,1.0);
+                        bot_->SetModeTorqueGc(chain_,i);
+                        bot_->SetTorque_mNm(chain_,i,m2mm(torques_cmd_[i]));
                    }
-                   
                    for(int i=4;i<Ndof_;i++)
                    {
-                      bot_->SetStiffness(chain_,i,1.0);
-                      bot_->SetSlewRateProportional(chain_,i,1.0);
-                      bot_->SetModeThetaGc(chain_,i);
-                      bot_->SetThetaDeg(chain_,i,0.0);
+                        bot_->SetStiffness(chain_,i,1.0);
+                        bot_->SetSlewRateProportional(chain_,i,1.0);
+                        bot_->SetModeThetaGc(chain_,i);
+                        bot_->SetThetaDeg(chain_,i,0.0);
                    }
-                   
           }
           else
           {
