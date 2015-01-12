@@ -113,9 +113,15 @@ class VfForceController : public M3Controller
 		std::vector<cart_t> vm_state_dot_;
 		std::vector<cart_t> vm_kernel_;
 		
+                
+                Eigen::MatrixXd jacobian_position_;
+                Eigen::MatrixXd jacobian_orientation_;
+                
 		Eigen::MatrixXd jacobian_;
 		Eigen::MatrixXd jacobian_t_;
-                Eigen::MatrixXd jacobian_t_reduced_;
+                
+                //Eigen::MatrixXd jacobian_t_reduced_;
+                //Eigen::MatrixXd jacobian_reduced_;
 		Eigen::MatrixXd jacobian_t_pinv_;
 		
 		int cart_size_;
@@ -155,6 +161,9 @@ class VfForceController : public M3Controller
 		
 		Eigen::VectorXd orientation_ref_;
 		Eigen::VectorXd orientation_;
+                Eigen::VectorXd joints_orientation_cmd_;
+                Eigen::VectorXd joints_orientation_dot_;
+                Eigen::VectorXd joint_orientation_;
 		
 };
 

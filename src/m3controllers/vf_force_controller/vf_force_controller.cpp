@@ -53,7 +53,7 @@ void VfForceController::Startup()
         velocity_status_.fill(0.0);
 	
 	// Set the kinematic mask
-	kin_->setMask("1,1,1,1,1,1"); // xyz
+	kin_->setMask("1,1,1,1,1,1"); // xyz rpy
 
 	cart_size_ = kin_->getCartSize();
 	
@@ -90,10 +90,16 @@ void VfForceController::Startup()
         }
 	
 	// User velocity, vf and joint vel commands
-	jacobian_.resize(3,Ndof_controlled_);
-	jacobian_t_.resize(Ndof_controlled_,3);
-	jacobian_t_pinv_.resize(Ndof_controlled_,3);
-        jacobian_t_reduced_.resize(4,3);
+	jacobian_.resize(6,Ndof_controlled_);
+        
+        jacobian_position_.resize(3,4);
+        jacobian_orientation_.resize(3,3);
+        
+	jacobian_t_.resize(4,3); // only pos
+	jacobian_t_pinv_.resize(4,3); // only pos
+        
+        //jacobian_t_reduced_.resize(4,3);
+
 	scales_.resize(vm_nb_);
 	phase_.resize(vm_nb_);
 	phase_dot_.resize(vm_nb_);
@@ -109,6 +115,9 @@ void VfForceController::Startup()
        
 	orientation_ref_.resize(3);
 	orientation_.resize(3);
+        joints_orientation_cmd_.resize(3);
+        joints_orientation_dot_.resize(3);
+        joint_orientation_.resize(3);
 	
 	// Clear
 	f_user_.fill(0.0);
@@ -123,6 +132,15 @@ void VfForceController::Startup()
         power_mv_.fill(0.0);
 	fades_.fill(0.0);
         Ks_.fill(0.0);
+        
+        orientation_.fill(0.0);
+        
+        orientation_ref_.fill(0.0);
+        //orientation_ref_ << -2.79058, -1.40391, 2.52841;
+
+        joints_orientation_cmd_.fill(0.0);
+        joints_orientation_dot_.fill(0.0);
+        joint_orientation_.fill(0.0);
         
         if (vm_nb_ > 1)
             treshold_ = 1.0/vm_nb_ + 0.1;
@@ -383,8 +401,11 @@ void VfForceController::StepStatus()
             
 	kin_->ComputeJac(position_status_,jacobian_);
         
-
-	jacobian_t_= jacobian_.transpose();
+        jacobian_position_ = jacobian_.block<3,4>(0,0);
+        jacobian_orientation_ = jacobian_.block<3,3>(3,4);
+        //jacobian_orientation_ = jacobian_.block<3,7>(3,0);
+        
+	jacobian_t_= jacobian_position_.transpose();
 	
 	//jacobian_.transposeInPlace(); //NOTE No rt safe!!! http://eigen.tuxfamily.org/dox-devel/classEigen_1_1DenseBase.html#ac501bd942994af7a95d95bee7a16ad2a
 	// IK
@@ -558,34 +579,39 @@ void VfForceController::StepCommand()
         f_cmd_ = f_vm_;
         
          //for(int i=0;i<Ndof_controlled_;i++)
-        jacobian_t_reduced_.row(0) = jacobian_t_.row(0);
+        /*jacobian_t_reduced_.row(0) = jacobian_t_.row(0);
         jacobian_t_reduced_.row(1) = jacobian_t_.row(1);
         jacobian_t_reduced_.row(2) = jacobian_t_.row(2);
-        jacobian_t_reduced_.row(3) = jacobian_t_.row(3);
+        jacobian_t_reduced_.row(3) = jacobian_t_.row(3);*/
 
-        torques_cmd_ = jacobian_t_reduced_ * f_cmd_;
+        torques_cmd_ = jacobian_t_ * f_cmd_;
         
-	//jacobian_.inverse() * ();
-	
-	
-        //torques_cmd_ = jacobian_t_ * f_cmd_;
-	
-	//fd_ = (c_*D_*f_ + (1-c_)*(I_-D_)*f_);
-	//joints_torques_cmd_ = jacobian_.transpose() * fd_;
-	
-	// Compute IK
-	//kin_->clikCommandStep(joints_pos_status_,cart_pos_cmd_,joints_pos_cmd_);
-	
-	
-	//joints_torques_cmd_[0] = 0.8;
-       // joints_torques_cmd_[3] = 0.8;
+        orientation_ = cart_pos_status_.segment<3>(3);
+        joint_orientation_ = position_status_.segment<3>(4);
         
-	//joints_torques_cmd_.head(3) = torques_cmd_;
-// 	joints_torques_cmd_[0] = 0.8;
-//         joints_torques_cmd_[3] = 0.8;
- 	//M3Controller::StepMotorsCommand(joints_torques_cmd_);
-	
-	
+        /*jacobian_reduced_.row(0) = jacobian_.row(4);
+        jacobian_reduced_.row(1) = jacobian_.row(5);
+        jacobian_reduced_.row(2) = jacobian_.row(6);*/
+        
+
+        
+        //jacobian_reduced_ = jacobian_.block<3,3>(4,5);
+        
+	joints_orientation_dot_ = jacobian_orientation_.inverse() * 100 * (orientation_ref_ - orientation_);
+	joints_orientation_cmd_ = joints_orientation_dot_ * dt_ + joint_orientation_;
+        
+        std::cout << " ** joints_orientation_cmd_ ** " << std::endl;
+        std::cout << joints_orientation_cmd_ << std::endl;
+        
+        
+        /*std::cout << " ** J ** " << std::endl;
+        std::cout << jacobian_ << std::endl;
+        std::cout << " ** Jposition ** " << std::endl;
+        std::cout << jacobian_position_ << std::endl;
+        std::cout << " ** Jorientation ** " << std::endl;
+        std::cout << jacobian_orientation_ << std::endl;*/
+        
+        
 	 // Motors on
           if (m3_controller_interface_command_.enable())
           {
@@ -601,8 +627,8 @@ void VfForceController::StepCommand()
                    {
                         bot_->SetStiffness(chain_,i,1.0);
                         bot_->SetSlewRateProportional(chain_,i,1.0);
-                        bot_->SetModeThetaGc(chain_,i);
-                        bot_->SetThetaDeg(chain_,i,0.0);
+                        bot_->SetModeTheta(chain_,i);
+                        bot_->SetThetaDeg(chain_,i,RAD2DEG(joints_orientation_cmd_(i-4))); //joints_orientation_cmd_(i-4)
                    }
           }
           else
