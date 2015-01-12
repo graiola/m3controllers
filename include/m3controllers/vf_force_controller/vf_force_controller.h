@@ -9,6 +9,7 @@
 
 ////////// Eigen
 #include <eigen3/Eigen/Core>
+#include <eigen3/Eigen/LU>
 
 ////////// Google protobuff
 //#include <google/protobuf/message.h>
@@ -151,6 +152,10 @@ class VfForceController : public M3Controller
 		Eigen::MatrixXd matrixV_;
 		Eigen::MatrixXd jacobian_t_pinv_tmp_;
 		Eigen::VectorXd f_user_tmp_;
+		
+		Eigen::VectorXd orientation_ref_;
+		Eigen::VectorXd orientation_;
+		
 };
 
 

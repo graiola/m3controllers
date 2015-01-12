@@ -53,7 +53,7 @@ void VfForceController::Startup()
         velocity_status_.fill(0.0);
 	
 	// Set the kinematic mask
-	kin_->setMask("1,1,1,0,0,0"); // xyz
+	kin_->setMask("1,1,1,1,1,1"); // xyz
 
 	cart_size_ = kin_->getCartSize();
 	
@@ -107,7 +107,9 @@ void VfForceController::Startup()
 	f_vm_.resize(3);
 	f_cmd_.resize(3);
        
-
+	orientation_ref_.resize(3);
+	orientation_.resize(3);
+	
 	// Clear
 	f_user_.fill(0.0);
 	f_vm_.fill(0.0);
@@ -417,21 +419,21 @@ void VfForceController::StepStatus()
 	// Update the vms, take their distances
 	for(int i=0; i<vm_nb_;i++)
 	{
-	  vm_vector_[i]->Update(cart_pos_status_,cart_vel_status_,dt_);
+	  vm_vector_[i]->Update(cart_pos_status_.segment<3>(0),cart_vel_status_.segment<3>(0),dt_);
 	  
 	  switch(prob_mode_) 
 	  {
 	    case SCALED:
-	      scales_(i) = 1/(vm_vector_[i]->getDistance(cart_pos_status_) + 0.001); // NOTE 0.001 it's kind of eps to avoid division by 0
+	      scales_(i) = 1/(vm_vector_[i]->getDistance(cart_pos_status_.segment<3>(0)) + 0.001); // NOTE 0.001 it's kind of eps to avoid division by 0
 	      break;
 	    case CONDITIONAL:
-	      scales_(i) = vm_vector_[i]->getProbability(cart_pos_status_);
+	      scales_(i) = vm_vector_[i]->getProbability(cart_pos_status_.segment<3>(0));
 	      break;
 	    case PRIORS:
-	      scales_(i) = std::exp(-10*vm_vector_[i]->getDistance(cart_pos_status_));
+	      scales_(i) = std::exp(-10*vm_vector_[i]->getDistance(cart_pos_status_.segment<3>(0)));
 	      break;
 	    case MIX:
-	      scales_(i) = vm_vector_[i]->getProbability(cart_pos_status_);
+	      scales_(i) = vm_vector_[i]->getProbability(cart_pos_status_.segment<3>(0));
 	      break;
 	    default:
 	      break;
@@ -506,7 +508,7 @@ void VfForceController::StepStatus()
 	      scales_(i) = scales_(i);
 	      break;
 	     case MIX:
-	      scales_(i) = std::exp(-10*vm_vector_[i]->getDistance(cart_pos_status_)) * scales_(i)/sum_;
+	      scales_(i) = std::exp(-10*vm_vector_[i]->getDistance(cart_pos_status_.segment<3>(0))) * scales_(i)/sum_;
 	      break;
 	    default:
 	      break;
@@ -527,9 +529,9 @@ void VfForceController::StepStatus()
           
           Ks_(i) = K_;
 	  
-          errors_[i] = (vm_state_[i] - cart_pos_status_);
+          errors_[i] = (vm_state_[i] - cart_pos_status_.segment<3>(0));
           
-	  f_vm_ += scales_(i) * (K_ * (vm_state_[i] - cart_pos_status_) + B_ * (vm_state_dot_[i] - cart_vel_status_)); // Sum over all the vms
+	  f_vm_ += scales_(i) * (K_ * (vm_state_[i] - cart_pos_status_.segment<3>(0)) + B_ * (vm_state_dot_[i] - cart_vel_status_.segment<3>(0))); // Sum over all the vms
 	}
 	
 	rt_publishers_path_.PublishAll();
@@ -563,6 +565,9 @@ void VfForceController::StepCommand()
 
         torques_cmd_ = jacobian_t_reduced_ * f_cmd_;
         
+	//jacobian_.inverse() * ();
+	
+	
         //torques_cmd_ = jacobian_t_ * f_cmd_;
 	
 	//fd_ = (c_*D_*f_ + (1-c_)*(I_-D_)*f_);
