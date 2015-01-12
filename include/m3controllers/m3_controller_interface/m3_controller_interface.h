@@ -5,6 +5,7 @@
 
 ////////// M3
 #include <m3/chains/arm.h>
+#include <m3/chains/hand.h>
 #include <m3/robots/humanoid.h>
 
 ////////// M3RT

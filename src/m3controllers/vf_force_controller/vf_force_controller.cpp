@@ -417,7 +417,7 @@ void VfForceController::StepStatus()
 	// Update the vms, take their distances
 	for(int i=0; i<vm_nb_;i++)
 	{
-	  // vm_vector_[i]->Update(cart_pos_status_,cart_vel_status_,dt_);
+	  vm_vector_[i]->Update(cart_pos_status_,cart_vel_status_,dt_);
 	  
 	  switch(prob_mode_) 
 	  {
@@ -428,7 +428,7 @@ void VfForceController::StepStatus()
 	      scales_(i) = vm_vector_[i]->getProbability(cart_pos_status_);
 	      break;
 	    case PRIORS:
-	      scales_(i) = std::exp(-10*vm_vector_[i]->getDistance(cart_pos_status_));
+	      scales_(i) = std::exp(-15*vm_vector_[i]->getDistance(cart_pos_status_));
 	      break;
 	    case MIX:
 	      scales_(i) = vm_vector_[i]->getProbability(cart_pos_status_);
@@ -506,13 +506,14 @@ void VfForceController::StepStatus()
 	      scales_(i) = scales_(i);
 	      break;
 	     case MIX:
-	      scales_(i) = std::exp(-10*vm_vector_[i]->getDistance(cart_pos_status_)) * scales_(i)/sum_;
+	      scales_(i) = std::exp(-15*vm_vector_[i]->getDistance(cart_pos_status_)) * scales_(i)/sum_;
 	      break;
 	    default:
 	      break;
 	  }
 
 	  vm_vector_[i]->Update(cart_pos_status_,cart_vel_status_,dt_,scales_(i));
+	  //vm_vector_[i]->Update(cart_pos_status_,cart_vel_status_,dt_);
 	  
 	}
 	// Compute the force from the vms
@@ -594,7 +595,15 @@ void VfForceController::StepCommand()
                         bot_->SetModeTorqueGc(chain_,i);
                         bot_->SetTorque_mNm(chain_,i,m2mm(torques_cmd_[i]));
                    }
-                   for(int i=4;i<Ndof_;i++)
+                   
+                  
+                        bot_->SetStiffness(chain_,4,1.0);
+                        bot_->SetSlewRateProportional(chain_,4,1.0);
+                        bot_->SetModeThetaGc(chain_,4);
+                        bot_->SetThetaDeg(chain_,4,90);
+                   
+                   
+                   for(int i=5;i<Ndof_;i++)
                    {
                         bot_->SetStiffness(chain_,i,1.0);
                         bot_->SetSlewRateProportional(chain_,i,1.0);
@@ -605,13 +614,36 @@ void VfForceController::StepCommand()
           else
           {
                bot_->SetMotorPowerOn();
-               for(int i=0;i<7;i++)
+               for(int i=0;i<4;i++)
                    {
                       bot_->SetStiffness(chain_,i,0.0);
                       bot_->SetSlewRateProportional(chain_,i,1.0);
                       bot_->SetModeTorqueGc(chain_,i);
                       //bot_->SetTorque_mNm(chain_,i,m2mm(user_torques_[i]));
                    }
+                   
+                    /*bot_->SetStiffness(chain_,4,1.0);
+                        bot_->SetSlewRateProportional(chain_,4,1.0);
+                        bot_->SetModeThetaGc(chain_,4);
+                        bot_->SetThetaDeg(chain_,4,90);
+                   
+                   
+                   for(int i=5;i<Ndof_;i++)
+                   {
+                        bot_->SetStiffness(chain_,i,1.0);
+                        bot_->SetSlewRateProportional(chain_,i,1.0);
+                        bot_->SetModeThetaGc(chain_,i);
+                        bot_->SetThetaDeg(chain_,i,0.0);
+                   }
+                   
+                for(int i=0;i<5;i++)
+                   {
+                      bot_->SetStiffness(RIGHT_HAND,i,1.0);
+                      bot_->SetSlewRateProportional(RIGHT_HAND,i,1.0);
+                      bot_->SetModeTorque(RIGHT_HAND,i);
+                      bot_->SetTorque_mNm(RIGHT_HAND,i,42);
+                    }*/
+                   
           }
 
 	SAVE_TIME(end_dt_cmd_);
