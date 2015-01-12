@@ -85,7 +85,7 @@ void VfForceController::Startup()
 	for(int i=0; i<vm_nb_;i++)
         {
             vm_vector_[i]->Init();
-	    vm_vector_[i]->setAdaptGains(adapt_gains_[i]);
+	    //vm_vector_[i]->setAdaptGains(adapt_gains_[i]);
 	    vm_vector_[i]->setWeightedDist(use_weighted_dist_[i]);
         }
 	
@@ -439,7 +439,7 @@ void VfForceController::StepStatus()
 	      break;
 	  }
 	    
-          fades_(i) = vm_vector_[i]->getFade();
+          //fades_(i) = vm_vector_[i]->getFade();
 	  phase_(i) = vm_vector_[i]->getPhase();
 	  //phase_dot_(i) = vm_vector_[i]->getPhaseDot();
           //phase_ddot_(i) = vm_vector_[i]->getPhaseDDot();
@@ -462,7 +462,7 @@ void VfForceController::StepStatus()
         }
         
         //if (f_user_.norm() < 2.0 && f_user_.norm() > -2.0)
-        if (f_user_.norm() < 4.0 && f_user_.norm() > -4.0)
+        /*if (f_user_.norm() < 4.0 && f_user_.norm() > -4.0)
         {
             f_user_.fill(0.0);
             for(int i=0; i<vm_nb_;i++)
@@ -476,7 +476,7 @@ void VfForceController::StepStatus()
             {
                 //std::cout<<"Deactive "<<f_user_.norm()<<std::endl;
                 vm_vector_[i]->setActive(false);
-            }
+            }*/
 	
 
 	sum_ = scales_.sum();
