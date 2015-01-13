@@ -339,7 +339,7 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	root_name_ = "T0"; //FIXME
 	
 	if(chain_name_ == "RIGHT_ARM")
-		end_effector_name_ = "palm_right"; //wrist_RIGHT
+		end_effector_name_ = "fixed_right_wrist"; //wrist_RIGHT
 	else if(chain_name_ == "LEFT_ARM")
 		 end_effector_name_ = "palm_left";
 	else
@@ -588,32 +588,37 @@ void VfForceController::StepCommand()
         
         orientation_ = cart_pos_status_.segment<3>(3);
         
-        
-        
 
         Eigen::AngleAxisd rollAngle(orientation_(2), Eigen::Vector3d::UnitZ());
         Eigen::AngleAxisd yawAngle(orientation_(1), Eigen::Vector3d::UnitY());
         Eigen::AngleAxisd pitchAngle(orientation_(0), Eigen::Vector3d::UnitX());
         Eigen::Quaternion<double> q = rollAngle * yawAngle * pitchAngle;
+        Eigen::Quaternion<double> qref(1.0,0.0,0.0,0.0);
         Eigen::Matrix3d rotArm = q.matrix();
-        Eigen::Matrix3d rotWrist = rotArm.transpose();
+        Eigen::Matrix3d rotRef = qref.matrix();
+        Eigen::Matrix3d rotWrist = rotArm.transpose() * rotRef;
 
         
         //std::cout << "***" << std::endl;
-        //std::cout << q.coeffs() << std::endl;
+        //std::cout << rotRef << std::endl;
         
+        joints_orientation_cmd_(2) = -std::atan2(rotWrist(1,0),rotWrist(0,0));
+        joints_orientation_cmd_(1) = std::atan2(rotWrist(2,0),std::sqrt(std::pow(rotWrist(2,1),2) + std::pow(rotWrist(2,2),2)));
+        joints_orientation_cmd_(0) = std::atan2(rotWrist(2,1),rotWrist(2,2));
         
-        joints_orientation_cmd_(0) = std::atan2(-rotWrist(1,2),-rotWrist(0,2));
-        joints_orientation_cmd_(1) = std::atan2(-std::sqrt(std::pow(rotWrist(1,2),2) + std::pow(rotWrist(0,2),2)),rotWrist(2,2));
-        joints_orientation_cmd_(2) = std::atan2(-rotWrist(2,1),rotWrist(2,0));
+        //joints_orientation_cmd_(0) = std::atan2(-rotWrist(1,2),-rotWrist(0,2));
+        //joints_orientation_cmd_(1) = std::atan2(-std::sqrt(std::pow(rotWrist(1,2),2) + std::pow(rotWrist(0,2),2)),rotWrist(2,2));
+        //joints_orientation_cmd_(2) = std::atan2(-rotWrist(2,1),rotWrist(2,0));
         
         joint_orientation_ = position_status_.segment<3>(4);
-	//joints_orientation_dot_ = jacobian_orientation_.inverse() * 100 * (orientation_ref_ - orientation_);
+	//joints_orientation_dot_ = jacobian_orientation_.inverse() * 20 * (orientation_ref_ - orientation_);
 	//joints_orientation_cmd_ = joints_orientation_dot_ * dt_ + joint_orientation_;
         
-        joints_orientation_dot_ = 20 * (joints_orientation_cmd_ - joint_orientation_);
+        joints_orientation_dot_ = 500 * (joints_orientation_cmd_ - joint_orientation_);
         joints_orientation_cmd_ = joints_orientation_dot_ * dt_ + joint_orientation_;
         
+        //std::cout << " ** J ** " << std::endl;
+        //std::cout << joints_orientation_cmd_ - joint_orientation_ << std::endl;
         
         /*std::cout << " ** J ** " << std::endl;
         std::cout << jacobian_ << std::endl;
@@ -634,14 +639,30 @@ void VfForceController::StepCommand()
                         bot_->SetModeTorqueGc(chain_,i);
                         bot_->SetTorque_mNm(chain_,i,m2mm(torques_cmd_[i]));
                    }
-                   for(int i=4;i<Ndof_;i++)
+                   
+                    bot_->SetStiffness(chain_,4,1.0);
+                    bot_->SetSlewRateProportional(chain_,4,1.0);
+                    bot_->SetModeThetaGc(chain_,4);
+                    bot_->SetThetaDeg(chain_,4,RAD2DEG(joints_orientation_cmd_(0))); //joints_orientation_cmd_(i-4)
+                    
+                    bot_->SetStiffness(chain_,5,1.0);
+                    bot_->SetSlewRateProportional(chain_,5,1.0);
+                    bot_->SetModeThetaGc(chain_,5);
+                    bot_->SetThetaDeg(chain_,5,RAD2DEG(joints_orientation_cmd_(1))); //joints_orientation_cmd_(i-4)
+                    
+                    bot_->SetStiffness(chain_,6,1.0);
+                    bot_->SetSlewRateProportional(chain_,6,1.0);
+                    bot_->SetModeThetaGc(chain_,6);
+                    bot_->SetThetaDeg(chain_,6,RAD2DEG(joints_orientation_cmd_(2))); //joints_orientation_cmd_(i-4)
+                   
+                   /*for(int i=4;i<Ndof_;i++)
                    {
                         bot_->SetStiffness(chain_,i,1.0);
-                        bot_->SetSlewRateProportional(chain_,i,0.5);
+                        bot_->SetSlewRateProportional(chain_,i,1.0);
                         bot_->SetModeThetaGc(chain_,i);
                         bot_->SetThetaDeg(chain_,i,RAD2DEG(joints_orientation_cmd_(i-4))); //joints_orientation_cmd_(i-4)
 
-                   }
+                   }*/
           }
           else
           {
