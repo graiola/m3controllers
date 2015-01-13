@@ -606,15 +606,15 @@ void VfForceController::StepCommand()
         joints_orientation_cmd_(1) = std::atan2(rotWrist(2,0),std::sqrt(std::pow(rotWrist(2,1),2) + std::pow(rotWrist(2,2),2)));
         joints_orientation_cmd_(0) = std::atan2(rotWrist(2,1),rotWrist(2,2));
         
-        //joints_orientation_cmd_(0) = std::atan2(-rotWrist(1,2),-rotWrist(0,2));
-        //joints_orientation_cmd_(1) = std::atan2(-std::sqrt(std::pow(rotWrist(1,2),2) + std::pow(rotWrist(0,2),2)),rotWrist(2,2));
-        //joints_orientation_cmd_(2) = std::atan2(-rotWrist(2,1),rotWrist(2,0));
+        //joints_orientation_cmd_(2) = -std::atan2(rotWrist(1,0),rotWrist(0,0));
+        //joints_orientation_cmd_(1) = std::atan2(rotWrist(2,0),std::sqrt(std::pow(rotWrist(2,1),2) + std::pow(rotWrist(2,2),2)));
+        //joints_orientation_cmd_(0) = std::atan2(rotWrist(2,1),rotWrist(2,2));
         
         joint_orientation_ = position_status_.segment<3>(4);
 	//joints_orientation_dot_ = jacobian_orientation_.inverse() * 20 * (orientation_ref_ - orientation_);
 	//joints_orientation_cmd_ = joints_orientation_dot_ * dt_ + joint_orientation_;
         
-        joints_orientation_dot_ = 500 * (joints_orientation_cmd_ - joint_orientation_);
+        joints_orientation_dot_ = 1000 * (joints_orientation_cmd_ - joint_orientation_);
         joints_orientation_cmd_ = joints_orientation_dot_ * dt_ + joint_orientation_;
         
         //std::cout << " ** J ** " << std::endl;
@@ -674,6 +674,15 @@ void VfForceController::StepCommand()
                       bot_->SetModeTorqueGc(chain_,i);
                       //bot_->SetTorque_mNm(chain_,i,m2mm(user_torques_[i]));
                    }
+                   
+                   
+                 for(int i=0;i<5;i++)
+               {
+                     bot_->SetStiffness(RIGHT_HAND,i,1.0);
+                      bot_->SetSlewRateProportional(RIGHT_HAND,i,1.0);
+                      bot_->SetModeTorque(RIGHT_HAND,i);
+                      bot_->SetTorque_mNm(RIGHT_HAND,i,42);
+               }
           }
 
 	SAVE_TIME(end_dt_cmd_);
