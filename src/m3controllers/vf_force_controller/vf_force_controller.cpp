@@ -587,21 +587,32 @@ void VfForceController::StepCommand()
         torques_cmd_ = jacobian_t_ * f_cmd_;
         
         orientation_ = cart_pos_status_.segment<3>(3);
-        joint_orientation_ = position_status_.segment<3>(4);
         
-        /*jacobian_reduced_.row(0) = jacobian_.row(4);
-        jacobian_reduced_.row(1) = jacobian_.row(5);
-        jacobian_reduced_.row(2) = jacobian_.row(6);*/
+        
         
 
+        Eigen::AngleAxisd rollAngle(orientation_(2), Eigen::Vector3d::UnitZ());
+        Eigen::AngleAxisd yawAngle(orientation_(1), Eigen::Vector3d::UnitY());
+        Eigen::AngleAxisd pitchAngle(orientation_(0), Eigen::Vector3d::UnitX());
+        Eigen::Quaternion<double> q = rollAngle * yawAngle * pitchAngle;
+        Eigen::Matrix3d rotArm = q.matrix();
+        Eigen::Matrix3d rotWrist = rotArm.transpose();
+
         
-        //jacobian_reduced_ = jacobian_.block<3,3>(4,5);
+        //std::cout << "***" << std::endl;
+        //std::cout << q.coeffs() << std::endl;
         
-	joints_orientation_dot_ = jacobian_orientation_.inverse() * 100 * (orientation_ref_ - orientation_);
-	joints_orientation_cmd_ = joints_orientation_dot_ * dt_ + joint_orientation_;
         
-        std::cout << " ** joints_orientation_cmd_ ** " << std::endl;
-        std::cout << joints_orientation_cmd_ << std::endl;
+        joints_orientation_cmd_(0) = std::atan2(-rotWrist(1,2),-rotWrist(0,2));
+        joints_orientation_cmd_(1) = std::atan2(-std::sqrt(std::pow(rotWrist(1,2),2) + std::pow(rotWrist(0,2),2)),rotWrist(2,2));
+        joints_orientation_cmd_(2) = std::atan2(-rotWrist(2,1),rotWrist(2,0));
+        
+        joint_orientation_ = position_status_.segment<3>(4);
+	//joints_orientation_dot_ = jacobian_orientation_.inverse() * 100 * (orientation_ref_ - orientation_);
+	//joints_orientation_cmd_ = joints_orientation_dot_ * dt_ + joint_orientation_;
+        
+        joints_orientation_dot_ = 20 * (joints_orientation_cmd_ - joint_orientation_);
+        joints_orientation_cmd_ = joints_orientation_dot_ * dt_ + joint_orientation_;
         
         
         /*std::cout << " ** J ** " << std::endl;
@@ -626,9 +637,10 @@ void VfForceController::StepCommand()
                    for(int i=4;i<Ndof_;i++)
                    {
                         bot_->SetStiffness(chain_,i,1.0);
-                        bot_->SetSlewRateProportional(chain_,i,1.0);
-                        bot_->SetModeTheta(chain_,i);
+                        bot_->SetSlewRateProportional(chain_,i,0.5);
+                        bot_->SetModeThetaGc(chain_,i);
                         bot_->SetThetaDeg(chain_,i,RAD2DEG(joints_orientation_cmd_(i-4))); //joints_orientation_cmd_(i-4)
+
                    }
           }
           else

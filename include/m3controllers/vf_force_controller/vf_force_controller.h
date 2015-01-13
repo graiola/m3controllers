@@ -1,6 +1,9 @@
 #ifndef VF_FORCE_CONTROLLER_H
 #define VF_FORCE_CONTROLLER_H
 
+////////// CMATH
+#include <cmath>
+
 ////////// M3_CONTROLLER_INTERFACE
 #include "m3controllers/m3_controller_interface/m3_controller_interface.h"
 
