@@ -592,7 +592,7 @@ void VfForceController::StepCommand()
         Eigen::AngleAxisd rollAngle(orientation_(2), Eigen::Vector3d::UnitZ());
         Eigen::AngleAxisd yawAngle(orientation_(1), Eigen::Vector3d::UnitY());
         Eigen::AngleAxisd pitchAngle(orientation_(0), Eigen::Vector3d::UnitX());
-        Eigen::Quaternion<double> q = rollAngle * yawAngle * pitchAngle;
+        Eigen::Quaternion<double> q = rollAngle* pitchAngle * yawAngle;
         Eigen::Quaternion<double> qref(1.0,0.0,0.0,0.0);
         Eigen::Matrix3d rotArm = q.matrix();
         Eigen::Matrix3d rotRef = qref.matrix();
@@ -613,6 +613,15 @@ void VfForceController::StepCommand()
         joint_orientation_ = position_status_.segment<3>(4);
 	//joints_orientation_dot_ = jacobian_orientation_.inverse() * 20 * (orientation_ref_ - orientation_);
 	//joints_orientation_cmd_ = joints_orientation_dot_ * dt_ + joint_orientation_;
+        
+        /*Eigen::AngleAxisd rollAngle2(joint_orientation_(0), Eigen::Vector3d::UnitZ());
+        Eigen::AngleAxisd yawAngle2(joint_orientation_(1), Eigen::Vector3d::UnitY());
+        Eigen::AngleAxisd pitchAngle2(joint_orientation_(2), Eigen::Vector3d::UnitX());
+        Eigen::Quaternion<double> q2 = rollAngle2 * pitchAngle2 *yawAngle2  ;
+        Eigen::Matrix3d rotArm2 = q2.matrix();
+        std::cout << "***" << std::endl;
+        std::cout << rotArm2 << std::endl;
+        */
         
         joints_orientation_dot_ = 1000 * (joints_orientation_cmd_ - joint_orientation_);
         joints_orientation_cmd_ = joints_orientation_dot_ * dt_ + joint_orientation_;
