@@ -595,7 +595,11 @@ void VfForceController::StepCommand()
         Eigen::AngleAxisd yawAngle(orientation_(1), Eigen::Vector3d::UnitY());
         Eigen::AngleAxisd pitchAngle(orientation_(0), Eigen::Vector3d::UnitX());
 <<<<<<< HEAD
+<<<<<<< HEAD
         Eigen::Quaternion<double> q = rollAngle* pitchAngle * yawAngle;
+=======
+        Eigen::Quaternion<double> q = rollAngle * yawAngle * pitchAngle;
+>>>>>>> parent of 317de33... Roll pitch yaw order
         Eigen::Quaternion<double> qref(1.0,0.0,0.0,0.0);
 =======
         Eigen::Quaternion<double> q = rollAngle * yawAngle * pitchAngle;
@@ -623,6 +627,7 @@ void VfForceController::StepCommand()
 	//joints_orientation_cmd_ = joints_orientation_dot_ * dt_ + joint_orientation_;
         
 <<<<<<< HEAD
+<<<<<<< HEAD
         /*Eigen::AngleAxisd rollAngle2(joint_orientation_(0), Eigen::Vector3d::UnitZ());
         Eigen::AngleAxisd yawAngle2(joint_orientation_(1), Eigen::Vector3d::UnitY());
         Eigen::AngleAxisd pitchAngle2(joint_orientation_(2), Eigen::Vector3d::UnitX());
@@ -632,6 +637,8 @@ void VfForceController::StepCommand()
         std::cout << rotArm2 << std::endl;
         */
         
+=======
+>>>>>>> parent of 317de33... Roll pitch yaw order
         joints_orientation_dot_ = 1000 * (joints_orientation_cmd_ - joint_orientation_);
 =======
         joints_orientation_dot_ = 20 * (joints_orientation_cmd_ - joint_orientation_);
