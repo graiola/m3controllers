@@ -167,7 +167,15 @@ class VfForceController : public M3Controller
                 Eigen::VectorXd joints_orientation_cmd_;
                 Eigen::VectorXd joints_orientation_dot_;
                 Eigen::VectorXd joint_orientation_;
-		
+
+                Eigen::Matrix3d rotArm;
+                Eigen::Matrix3d rotRef;
+                Eigen::Matrix3d rotWrist;
+                
+                M3Chain hand_chain_;
+
+                bool open_hand_;
+
 };
 
 

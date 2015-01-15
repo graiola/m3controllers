@@ -149,6 +149,8 @@ void VfForceController::Startup()
         
 	sum_ = 1.0;
         
+        open_hand_ = false;
+        
         svd_vect_.resize(3);
         svd_.reset(new svd_t(3,Ndof_controlled_));
 	
@@ -339,9 +341,15 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	root_name_ = "T0"; //FIXME
 	
 	if(chain_name_ == "RIGHT_ARM")
+        {
 		end_effector_name_ = "fixed_right_wrist"; //wrist_RIGHT
+                hand_chain_ = RIGHT_HAND;
+        }
 	else if(chain_name_ == "LEFT_ARM")
-		 end_effector_name_ = "palm_left";
+        {
+		 end_effector_name_ = "fixed_left_wrist";
+                 hand_chain_ = LEFT_HAND;
+        }
 	else
 	{
 		M3_ERR("Only RIGHT_ARM and LEFT_ARM are supported");
@@ -377,6 +385,7 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	}
 	
 	return true;
+        
 }
 
 void VfForceController::StepStatus()
@@ -402,8 +411,6 @@ void VfForceController::StepStatus()
 	kin_->ComputeJac(position_status_,jacobian_);
         
         jacobian_position_ = jacobian_.block<3,4>(0,0);
-        jacobian_orientation_ = jacobian_.block<3,3>(3,4);
-        //jacobian_orientation_ = jacobian_.block<3,7>(3,0);
         
 	jacobian_t_= jacobian_position_.transpose();
 	
@@ -467,6 +474,12 @@ void VfForceController::StepStatus()
 	  //det_mv_(i) = vm_vector_[i]->getDet();
 	  //torque_mv_(i) = vm_vector_[i]->getTorque();
           //power_mv_(i) = torque_mv_(i)*phase_dot_(i);
+          
+          if(phase_(i)>= 0.95)
+              open_hand_ = true;
+          if(phase_(i) <= 0.01)
+              open_hand_ = false;
+          
 	}
 	
 	//std::cout<<"P "<<torque_mv_(0)*phase_dot_(0)<<std::endl;
@@ -573,8 +586,6 @@ void VfForceController::StepCommand()
         SAVE_TIME(start_dt_cmd_);
   
 	M3Controller::StepCommand(); // Update the command sds
-	
-	//f_cmd_ = f_vm_ + f_user_;
 
         f_cmd_ = f_vm_;
         
@@ -586,119 +597,124 @@ void VfForceController::StepCommand()
 
         torques_cmd_ = jacobian_t_ * f_cmd_;
         
-        orientation_ = cart_pos_status_.segment<3>(3);
         
-
+        /*orientation_ = cart_pos_status_.segment<3>(3);
+        
         Eigen::AngleAxisd rollAngle(orientation_(2), Eigen::Vector3d::UnitZ());
         Eigen::AngleAxisd yawAngle(orientation_(1), Eigen::Vector3d::UnitY());
         Eigen::AngleAxisd pitchAngle(orientation_(0), Eigen::Vector3d::UnitX());
         Eigen::Quaternion<double> q = rollAngle* pitchAngle * yawAngle;
         Eigen::Quaternion<double> qref(1.0,0.0,0.0,0.0);
-        Eigen::Matrix3d rotArm = q.matrix();
-        Eigen::Matrix3d rotRef = qref.matrix();
-        Eigen::Matrix3d rotWrist = rotArm.transpose() * rotRef;
-
-        
-        //std::cout << "***" << std::endl;
-        //std::cout << rotRef << std::endl;
+        rotArm = q.matrix();
+        rotRef = qref.matrix();
+        rotWrist = rotArm.transpose() * rotRef;
         
         joints_orientation_cmd_(2) = -std::atan2(rotWrist(1,0),rotWrist(0,0));
         joints_orientation_cmd_(1) = std::atan2(rotWrist(2,0),std::sqrt(std::pow(rotWrist(2,1),2) + std::pow(rotWrist(2,2),2)));
         joints_orientation_cmd_(0) = std::atan2(rotWrist(2,1),rotWrist(2,2));
         
-        //joints_orientation_cmd_(2) = -std::atan2(rotWrist(1,0),rotWrist(0,0));
-        //joints_orientation_cmd_(1) = std::atan2(rotWrist(2,0),std::sqrt(std::pow(rotWrist(2,1),2) + std::pow(rotWrist(2,2),2)));
-        //joints_orientation_cmd_(0) = std::atan2(rotWrist(2,1),rotWrist(2,2));
-        
         joint_orientation_ = position_status_.segment<3>(4);
-	//joints_orientation_dot_ = jacobian_orientation_.inverse() * 20 * (orientation_ref_ - orientation_);
-	//joints_orientation_cmd_ = joints_orientation_dot_ * dt_ + joint_orientation_;
-        
-        /*Eigen::AngleAxisd rollAngle2(joint_orientation_(0), Eigen::Vector3d::UnitZ());
-        Eigen::AngleAxisd yawAngle2(joint_orientation_(1), Eigen::Vector3d::UnitY());
-        Eigen::AngleAxisd pitchAngle2(joint_orientation_(2), Eigen::Vector3d::UnitX());
-        Eigen::Quaternion<double> q2 = rollAngle2 * pitchAngle2 *yawAngle2  ;
-        Eigen::Matrix3d rotArm2 = q2.matrix();
-        std::cout << "***" << std::endl;
-        std::cout << rotArm2 << std::endl;
-        */
         
         joints_orientation_dot_ = 1000 * (joints_orientation_cmd_ - joint_orientation_);
-        joints_orientation_cmd_ = joints_orientation_dot_ * dt_ + joint_orientation_;
-        
-        //std::cout << " ** J ** " << std::endl;
-        //std::cout << joints_orientation_cmd_ - joint_orientation_ << std::endl;
-        
-        /*std::cout << " ** J ** " << std::endl;
-        std::cout << jacobian_ << std::endl;
-        std::cout << " ** Jposition ** " << std::endl;
-        std::cout << jacobian_position_ << std::endl;
-        std::cout << " ** Jorientation ** " << std::endl;
-        std::cout << jacobian_orientation_ << std::endl;*/
-        
-        
-	 // Motors on
+        joints_orientation_cmd_ = joints_orientation_dot_ * dt_ + joint_orientation_;*/
+
+          // Motors on
           if (m3_controller_interface_command_.enable())
           {
-              bot_->SetMotorPowerOn();
-                   for(int i=0;i<4;i++)
-                   {
-                        bot_->SetStiffness(chain_,i,1.0);
-                        bot_->SetSlewRateProportional(chain_,i,1.0);
-                        bot_->SetModeTorqueGc(chain_,i);
-                        bot_->SetTorque_mNm(chain_,i,m2mm(torques_cmd_[i]));
-                   }
-                   
-                    bot_->SetStiffness(chain_,4,1.0);
-                    bot_->SetSlewRateProportional(chain_,4,1.0);
-                    bot_->SetModeThetaGc(chain_,4);
-                    bot_->SetThetaDeg(chain_,4,RAD2DEG(joints_orientation_cmd_(0))); //joints_orientation_cmd_(i-4)
-                    
-                    bot_->SetStiffness(chain_,5,1.0);
-                    bot_->SetSlewRateProportional(chain_,5,1.0);
-                    bot_->SetModeThetaGc(chain_,5);
-                    bot_->SetThetaDeg(chain_,5,RAD2DEG(joints_orientation_cmd_(1))); //joints_orientation_cmd_(i-4)
-                    
-                    bot_->SetStiffness(chain_,6,1.0);
-                    bot_->SetSlewRateProportional(chain_,6,1.0);
-                    bot_->SetModeThetaGc(chain_,6);
-                    bot_->SetThetaDeg(chain_,6,RAD2DEG(joints_orientation_cmd_(2))); //joints_orientation_cmd_(i-4)
-                   
-                   /*for(int i=4;i<Ndof_;i++)
-                   {
-                        bot_->SetStiffness(chain_,i,1.0);
-                        bot_->SetSlewRateProportional(chain_,i,1.0);
-                        bot_->SetModeThetaGc(chain_,i);
-                        bot_->SetThetaDeg(chain_,i,RAD2DEG(joints_orientation_cmd_(i-4))); //joints_orientation_cmd_(i-4)
+            bot_->SetMotorPowerOn();
+            for(int i=0;i<4;i++)
+            {
+                bot_->SetStiffness(chain_,i,1.0);
+                bot_->SetSlewRateProportional(chain_,i,1.0);
+                bot_->SetModeTorqueGc(chain_,i);
+                bot_->SetTorque_mNm(chain_,i,m2mm(torques_cmd_[i]));
+            }
 
-                   }*/
+            for(int i=4;i<Ndof_;i++)
+            {
+                bot_->SetStiffness(chain_,i,1.0);
+                bot_->SetSlewRateProportional(chain_,i,1.0);
+                bot_->SetModeThetaGc(chain_,i);
+                bot_->SetThetaDeg(chain_,i,0.0);
+            }
+
+            if(open_hand_)
+            {
+                for(int i=0;i<5;i++)
+                {
+                    bot_->SetStiffness(hand_chain_,i,1.0);
+                    bot_->SetSlewRateProportional(hand_chain_,i,1.0);
+                    bot_->SetModeThetaGc(hand_chain_,i);
+                    bot_->SetThetaDeg(hand_chain_,i,0.0);
+                }
+            }
+            else
+            {
+                for(int i=0;i<5;i++)
+                {
+                    bot_->SetStiffness(hand_chain_,i,1.0);
+                    bot_->SetSlewRateProportional(hand_chain_,i,1.0);
+                    bot_->SetModeTorqueGc(hand_chain_,i);
+                    bot_->SetTorque_mNm(hand_chain_,i,m2mm(0.1));
+                }
+            }
+            
+            /*bot_->SetStiffness(chain_,4,1.0);
+            bot_->SetSlewRateProportional(chain_,4,1.0);
+            bot_->SetModeThetaGc(chain_,4);
+            bot_->SetThetaDeg(chain_,4,RAD2DEG(joints_orientation_cmd_(0)));
+
+            bot_->SetStiffness(chain_,5,1.0);
+            bot_->SetSlewRateProportional(chain_,5,1.0);
+            bot_->SetModeThetaGc(chain_,5);
+            bot_->SetThetaDeg(chain_,5,RAD2DEG(joints_orientation_cmd_(1)));
+
+            bot_->SetStiffness(chain_,6,1.0);
+            bot_->SetSlewRateProportional(chain_,6,1.0);
+            bot_->SetModeThetaGc(chain_,6);
+            bot_->SetThetaDeg(chain_,6,RAD2DEG(joints_orientation_cmd_(2)));*/
+
           }
           else
           {
-               bot_->SetMotorPowerOn();
-               for(int i=0;i<7;i++)
-                   {
-                      bot_->SetStiffness(chain_,i,0.0);
-                      bot_->SetSlewRateProportional(chain_,i,1.0);
-                      bot_->SetModeTorqueGc(chain_,i);
-                      //bot_->SetTorque_mNm(chain_,i,m2mm(user_torques_[i]));
-                   }
-                   
-                   
-                 for(int i=0;i<5;i++)
-               {
-                     bot_->SetStiffness(RIGHT_HAND,i,1.0);
-                      bot_->SetSlewRateProportional(RIGHT_HAND,i,1.0);
-                      bot_->SetModeTorque(RIGHT_HAND,i);
-                      bot_->SetTorque_mNm(RIGHT_HAND,i,42);
-               }
+            bot_->SetMotorPowerOn();
+            for(int i=0;i<4;i++)
+            {
+                bot_->SetStiffness(chain_,i,0.0);
+                bot_->SetSlewRateProportional(chain_,i,1.0);
+                bot_->SetModeTorqueGc(chain_,i);
+                //bot_->SetTorque_mNm(chain_,i,m2mm(user_torques_[i]));
+            }
+
+            /*if(loop_cnt_ > 5000)
+            {
+                for(int i=0;i<5;i++)
+                {
+                    bot_->SetStiffness(hand_chain_,i,1.0);
+                    bot_->SetSlewRateProportional(hand_chain_,i,1.0);
+                    bot_->SetModeTorqueGc(hand_chain_,i);
+                    bot_->SetTorque_mNm(hand_chain_,i,m2mm(0.01));
+                }
+            }
+            else
+            {
+                for(int i=0;i<5;i++)
+                {
+                    bot_->SetStiffness(hand_chain_,i,1.0);
+                    bot_->SetSlewRateProportional(hand_chain_,i,1.0);
+                    bot_->SetModeThetaGc(hand_chain_,i);
+                    bot_->SetThetaDeg(hand_chain_,i,0.0);
+                }
+
+            }*/
+            
+           
           }
 
 	SAVE_TIME(end_dt_cmd_);
         PRINT_TIME(start_dt_cmd_,end_dt_cmd_,tmp_dt_cmd_,"cmd");
 	//Eigen::internal::set_is_malloc_allowed(true);
-	
-	
+
 }
 
 }
