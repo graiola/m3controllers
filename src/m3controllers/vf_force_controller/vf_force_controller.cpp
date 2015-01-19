@@ -225,6 +225,7 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	//YAML::Node doc;
 	//GetYamlDoc(cfg_filename, doc);
 	
+    
 	if (!M3Controller::ReadConfig(cfg_filename))
 		return false;
 
@@ -603,7 +604,7 @@ void VfForceController::StepCommand()
         Eigen::AngleAxisd rollAngle(orientation_(2), Eigen::Vector3d::UnitZ());
         Eigen::AngleAxisd yawAngle(orientation_(1), Eigen::Vector3d::UnitY());
         Eigen::AngleAxisd pitchAngle(orientation_(0), Eigen::Vector3d::UnitX());
-        Eigen::Quaternion<double> q = rollAngle* pitchAngle * yawAngle;
+        Eigen::Quaternion<double> q = rollAngle*  yawAngle * pitchAngle;
         Eigen::Quaternion<double> qref(1.0,0.0,0.0,0.0);
         rotArm = q.matrix();
         rotRef = qref.matrix();
@@ -655,7 +656,7 @@ void VfForceController::StepCommand()
                     bot_->SetStiffness(hand_chain_,i,1.0);
                     bot_->SetSlewRateProportional(hand_chain_,i,1.0);
                     bot_->SetModeTorqueGc(hand_chain_,i);
-                    bot_->SetTorque_mNm(hand_chain_,i,m2mm(0.1));
+                    bot_->SetTorque_mNm(hand_chain_,i,m2mm(1));
                 }
             }
             
@@ -686,6 +687,27 @@ void VfForceController::StepCommand()
                 //bot_->SetTorque_mNm(chain_,i,m2mm(user_torques_[i]));
             }
 
+            if(open_hand_)
+            {
+                for(int i=0;i<5;i++)
+                {
+                    bot_->SetStiffness(hand_chain_,i,1.0);
+                    bot_->SetSlewRateProportional(hand_chain_,i,1.0);
+                    bot_->SetModeThetaGc(hand_chain_,i);
+                    bot_->SetThetaDeg(hand_chain_,i,0.0);
+                }
+            }
+            else
+            {
+                for(int i=0;i<5;i++)
+                {
+                    bot_->SetStiffness(hand_chain_,i,1.0);
+                    bot_->SetSlewRateProportional(hand_chain_,i,1.0);
+                    bot_->SetModeTorqueGc(hand_chain_,i);
+                    bot_->SetTorque_mNm(hand_chain_,i,m2mm(1));
+                }
+            }
+            
             /*if(loop_cnt_ > 5000)
             {
                 for(int i=0;i<5;i++)
