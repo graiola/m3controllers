@@ -595,6 +595,14 @@ void VfForceController::StepCommand()
                         bot_->SetModeTorqueGc(chain_,i);
                         bot_->SetTorque_mNm(chain_,i,m2mm(torques_cmd_[i]));
                    }
+                   
+                    for(int i=4;i<Ndof_;i++)
+                    {
+                        bot_->SetStiffness(chain_,i,1.0);
+                        bot_->SetSlewRateProportional(chain_,i,1.0);
+                        bot_->SetModeThetaGc(chain_,i);
+                        bot_->SetThetaDeg(chain_,i,0.0);
+                    }
 
                   /*
                         bot_->SetStiffness(chain_,4,1.0);
@@ -622,37 +630,14 @@ void VfForceController::StepCommand()
                       //bot_->SetTorque_mNm(chain_,i,m2mm(user_torques_[i]));
                 }
                 
-
-                /*for(int i=0;i<5;i++)
+                for(int i=4;i<Ndof_;i++)
                 {
-                      bot_->SetStiffness(RIGHT_HAND,i,1.0);
-                      bot_->SetSlewRateProportional(RIGHT_HAND,i,1.0);
-                      bot_->SetModeTorque(RIGHT_HAND,i);
-                      bot_->SetTorque_mNm(RIGHT_HAND,i,42);
-                }*/
-                   
-
-                    /*bot_->SetStiffness(chain_,4,1.0);
-                        bot_->SetSlewRateProportional(chain_,4,1.0);
-                        bot_->SetModeThetaGc(chain_,4);
-                        bot_->SetThetaDeg(chain_,4,90);
-                   
-                   
-                   for(int i=5;i<Ndof_;i++)
-                   {
-                        bot_->SetStiffness(chain_,i,1.0);
-                        bot_->SetSlewRateProportional(chain_,i,1.0);
-                        bot_->SetModeThetaGc(chain_,i);
-                        bot_->SetThetaDeg(chain_,i,0.0);
-                   }
-                   
-                for(int i=0;i<5;i++)
-                   {
-                      bot_->SetStiffness(RIGHT_HAND,i,1.0);
-                      bot_->SetSlewRateProportional(RIGHT_HAND,i,1.0);
-                      bot_->SetModeTorque(RIGHT_HAND,i);
-                      bot_->SetTorque_mNm(RIGHT_HAND,i,42);
-                    }*/
+                    bot_->SetStiffness(chain_,i,1.0);
+                    bot_->SetSlewRateProportional(chain_,i,1.0);
+                    bot_->SetModeThetaGc(chain_,i);
+                    bot_->SetThetaDeg(chain_,i,0.0);
+                }
+               
                    
           }
 
