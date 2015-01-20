@@ -129,6 +129,8 @@ void VfForceController::Startup()
         
 	sum_ = 1.0;
         
+        open_hand_ = true;
+        
         svd_vect_.resize(3);
         svd_.reset(new svd_t(3,Ndof_controlled_));
 	
@@ -444,6 +446,13 @@ void VfForceController::StepStatus()
 	  //det_mv_(i) = vm_vector_[i]->getDet();
 	  //torque_mv_(i) = vm_vector_[i]->getTorque();
           //power_mv_(i) = torque_mv_(i)*phase_dot_(i);
+          
+        if (phase_(i) >= 0.9)
+            open_hand_ = true;
+        else if (phase_(i) <= 0.1)
+            open_hand_ = false;
+          
+          
 	}
 	
 	//std::cout<<"P "<<torque_mv_(0)*phase_dot_(0)<<std::endl;
@@ -514,7 +523,8 @@ void VfForceController::StepStatus()
 
 	  vm_vector_[i]->Update(cart_pos_status_,cart_vel_status_,dt_,scales_(i));
 	  //vm_vector_[i]->Update(cart_pos_status_,cart_vel_status_,dt_);
-	  
+          
+ 
 	}
 	// Compute the force from the vms
 	f_vm_.fill(0.0);
@@ -534,6 +544,10 @@ void VfForceController::StepStatus()
           
 	  f_vm_ += scales_(i) * (K_ * (vm_state_[i] - cart_pos_status_) + B_ * (vm_state_dot_[i] - cart_vel_status_)); // Sum over all the vms
 	}
+	
+	
+
+
 	
 	rt_publishers_path_.PublishAll();
 	rt_publishers_wrench_.PublishAll();
@@ -618,6 +632,28 @@ void VfForceController::StepCommand()
                         bot_->SetModeThetaGc(chain_,i);
                         bot_->SetThetaDeg(chain_,i,0.0);
                    }*/
+                  
+                if(open_hand_)
+                {
+                    for(int i=0;i<5;i++)
+                    {
+                        bot_->SetStiffness(RIGHT_HAND,i,1.0);
+                        bot_->SetSlewRateProportional(RIGHT_HAND,i,1.0);
+                        bot_->SetModeThetaGc(RIGHT_HAND,i);
+                        bot_->SetThetaDeg(RIGHT_HAND,i,0.0);
+                    }
+                }
+                else
+                {
+                    for(int i=0;i<5;i++)
+                    {
+                        bot_->SetStiffness(RIGHT_HAND,i,1.0);
+                        bot_->SetSlewRateProportional(RIGHT_HAND,i,1.0);
+                        bot_->SetModeTorqueGc(RIGHT_HAND,i);
+                        bot_->SetTorque_mNm(RIGHT_HAND,i,m2mm(1));
+                    }
+                }
+                  
           }
           else
           {
@@ -636,6 +672,27 @@ void VfForceController::StepCommand()
                     bot_->SetSlewRateProportional(chain_,i,1.0);
                     bot_->SetModeThetaGc(chain_,i);
                     bot_->SetThetaDeg(chain_,i,0.0);
+                }
+                
+                if(open_hand_)
+                {
+                    for(int i=0;i<5;i++)
+                    {
+                        bot_->SetStiffness(RIGHT_HAND,i,1.0);
+                        bot_->SetSlewRateProportional(RIGHT_HAND,i,1.0);
+                        bot_->SetModeThetaGc(RIGHT_HAND,i);
+                        bot_->SetThetaDeg(RIGHT_HAND,i,0.0);
+                    }
+                }
+                else
+                {
+                    for(int i=0;i<5;i++)
+                    {
+                        bot_->SetStiffness(RIGHT_HAND,i,1.0);
+                        bot_->SetSlewRateProportional(RIGHT_HAND,i,1.0);
+                        bot_->SetModeTorqueGc(RIGHT_HAND,i);
+                        bot_->SetTorque_mNm(RIGHT_HAND,i,m2mm(1));
+                    }
                 }
                
                    
