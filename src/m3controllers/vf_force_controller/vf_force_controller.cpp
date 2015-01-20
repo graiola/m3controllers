@@ -476,7 +476,7 @@ void VfForceController::StepStatus()
 	  //torque_mv_(i) = vm_vector_[i]->getTorque();
           //power_mv_(i) = torque_mv_(i)*phase_dot_(i);
           
-          if(phase_(i)>= 0.95)
+          if(phase_(i)>= 0.90)
               open_hand_ = true;
           if(phase_(i) <= 0.01)
               open_hand_ = false;
@@ -604,21 +604,28 @@ void VfForceController::StepCommand()
         Eigen::AngleAxisd rollAngle(orientation_(2), Eigen::Vector3d::UnitZ());
         Eigen::AngleAxisd yawAngle(orientation_(1), Eigen::Vector3d::UnitY());
         Eigen::AngleAxisd pitchAngle(orientation_(0), Eigen::Vector3d::UnitX());
-        Eigen::Quaternion<double> q = rollAngle*  yawAngle * pitchAngle;
+        Eigen::Quaternion<double> q = rollAngle  * pitchAngle *  yawAngle;
         Eigen::Quaternion<double> qref(1.0,0.0,0.0,0.0);
         rotArm = q.matrix();
         rotRef = qref.matrix();
         rotWrist = rotArm.transpose() * rotRef;
         
+        // Original
+        /*joints_orientation_cmd_(2) = -std::atan2(rotWrist(1,0),rotWrist(0,0));
+        joints_orientation_cmd_(1) = std::atan2(rotWrist(2,0),std::sqrt(std::pow(rotWrist(2,1),2) + std::pow(rotWrist(2,2),2)));
+        joints_orientation_cmd_(0) = std::atan2(rotWrist(2,1),rotWrist(2,2));
+        
+        
         joints_orientation_cmd_(2) = -std::atan2(rotWrist(1,0),rotWrist(0,0));
         joints_orientation_cmd_(1) = std::atan2(rotWrist(2,0),std::sqrt(std::pow(rotWrist(2,1),2) + std::pow(rotWrist(2,2),2)));
         joints_orientation_cmd_(0) = std::atan2(rotWrist(2,1),rotWrist(2,2));
         
+        
         joint_orientation_ = position_status_.segment<3>(4);
         
         joints_orientation_dot_ = 1000 * (joints_orientation_cmd_ - joint_orientation_);
-        joints_orientation_cmd_ = joints_orientation_dot_ * dt_ + joint_orientation_;*/
-
+        joints_orientation_cmd_ = joints_orientation_dot_ * dt_ + joint_orientation_;
+        */
           // Motors on
           if (m3_controller_interface_command_.enable())
           {
@@ -686,7 +693,31 @@ void VfForceController::StepCommand()
                 bot_->SetModeTorqueGc(chain_,i);
                 //bot_->SetTorque_mNm(chain_,i,m2mm(user_torques_[i]));
             }
+            
+            for(int i=4;i<Ndof_;i++)
+            {
+                bot_->SetStiffness(chain_,i,1.0);
+                bot_->SetSlewRateProportional(chain_,i,1.0);
+                bot_->SetModeThetaGc(chain_,i);
+                bot_->SetThetaDeg(chain_,i,0.0);
+            }
 
+            /*bot_->SetStiffness(chain_,4,1.0);
+            bot_->SetSlewRateProportional(chain_,4,1.0);
+            bot_->SetModeThetaGc(chain_,4);
+            bot_->SetThetaDeg(chain_,4,RAD2DEG(joints_orientation_cmd_(0)));
+
+            bot_->SetStiffness(chain_,5,1.0);
+            bot_->SetSlewRateProportional(chain_,5,1.0);
+            bot_->SetModeThetaGc(chain_,5);
+            bot_->SetThetaDeg(chain_,5,RAD2DEG(joints_orientation_cmd_(1)));
+
+            bot_->SetStiffness(chain_,6,1.0);
+            bot_->SetSlewRateProportional(chain_,6,1.0);
+            bot_->SetModeThetaGc(chain_,6);
+            bot_->SetThetaDeg(chain_,6,RAD2DEG(joints_orientation_cmd_(2)));*/
+            
+            
             if(open_hand_)
             {
                 for(int i=0;i<5;i++)

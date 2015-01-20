@@ -5,11 +5,11 @@ chain: RIGHT_ARM
 joints_mask: 1,1,1,1,1,1,1
 controller_type: pos
 dynamic: m3dynamatics_right_arm_test
-file_names: ['/home/meka/m3controllers/data/ball_right_1.txt']  #['/home/meka/m3controllers/data/exp_2_kernels_2_goals/gmm_1.txt','/home/meka/m3controllers/data/exp_2_kernels_2_goals/gmm_2.txt']
+file_names: ['/home/meka/m3controllers/data/shelf_1.txt','/home/meka/m3controllers/data/shelf_2.txt']  #['/home/meka/m3controllers/data/exp_2_kernels_2_goals/gmm_1.txt','/home/meka/m3controllers/data/exp_2_kernels_2_goals/gmm_2.txt']
 serialized: true
-prob_mode: condtional
+prob_mode: conditional
 adapt_gains: [false,false]
-use_weighted_dist: [true,true]
+use_weighted_dist: [false,false]
 ik:
   damp_max: 0.8
   epsilon: 0.1
