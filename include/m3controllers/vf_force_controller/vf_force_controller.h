@@ -151,6 +151,8 @@ class VfForceController : public M3Controller
 		Eigen::MatrixXd matrixV_;
 		Eigen::MatrixXd jacobian_t_pinv_tmp_;
 		Eigen::VectorXd f_user_tmp_;
+                
+                bool open_hand_;
 };
 
 
