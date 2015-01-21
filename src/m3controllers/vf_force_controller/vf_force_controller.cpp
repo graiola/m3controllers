@@ -69,7 +69,7 @@ void VfForceController::Startup()
 	vect.fill(0.0);
 	for(int i=0; i<vm_nb_;i++)
 	{
-	  vm_vector_ .push_back(new VirtualMechanismGmr(cart_size_,fa_vector_[i]));
+	  vm_vector_ .push_back(new VirtualMechanismGmr(3,fa_vector_[i])); // Should be always 3 xyz
 	  vm_state_.push_back(vect);
 	  vm_state_dot_.push_back(vect);
           errors_.push_back(vect);
