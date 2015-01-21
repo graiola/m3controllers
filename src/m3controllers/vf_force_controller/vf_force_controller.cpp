@@ -39,7 +39,7 @@ void VfForceController::Startup()
 	// Resize
 	torques_id_.resize(Ndof_controlled_);
 	user_torques_.resize(Ndof_controlled_);
-        torques_cmd_.resize(3);
+        torques_cmd_.resize(4);
         torques_status_.resize(Ndof_controlled_);
         position_status_.resize(Ndof_controlled_);
         velocity_status_.resize(Ndof_controlled_);
@@ -597,7 +597,6 @@ void VfForceController::StepCommand()
         jacobian_t_reduced_.row(3) = jacobian_t_.row(3);*/
 
         torques_cmd_ = jacobian_t_ * f_cmd_;
-        
         
         /*orientation_ = cart_pos_status_.segment<3>(3);
         
