@@ -11,11 +11,6 @@ using namespace Eigen;
 using namespace virtual_mechanism_gmr;
 using namespace DmpBbo;
 
-// Checks
-// 	assert(centers_.size() == static_cast<size_t>(Ndof_));
-// 	assert(periods_.size() == static_cast<size_t>(Ndof_));
-// 	assert(magnitudes_.size() == static_cast<size_t>(Ndof_));
-
 
 bool VfForceController::LinkDependentComponents()
 {
@@ -65,7 +60,7 @@ void VfForceController::Startup()
 	// Number of virtual mechanisms
 	vm_nb_ = fa_vector_.size();
 	
-	cart_t vect(cart_size_);
+	cart_t vect(3);
 	vect.fill(0.0);
 	for(int i=0; i<vm_nb_;i++)
 	{
@@ -75,7 +70,7 @@ void VfForceController::Startup()
           errors_.push_back(vect);
 	}
 	
-	vect.resize(cart_size_*2); // NOTE dim = dim(mean) + dim(variance)
+	vect.resize(3+3); // NOTE dim = dim(mean) + dim(variance)
 	vect.fill(0.0);
 	for(int i=0; i<vm_nb_;i++)
 	{
@@ -90,13 +85,13 @@ void VfForceController::Startup()
         }
 	
 	// User velocity, vf and joint vel commands
-	jacobian_.resize(6,Ndof_controlled_);
+	jacobian_.resize(6,Ndof_);
         
         jacobian_position_.resize(3,4);
         jacobian_orientation_.resize(3,3);
         
 	jacobian_t_.resize(4,3); // only pos
-	jacobian_t_pinv_.resize(4,3); // only pos
+	jacobian_t_pinv_.resize(3,4); // only pos
         
         //jacobian_t_reduced_.resize(4,3);
 
@@ -134,9 +129,7 @@ void VfForceController::Startup()
         Ks_.fill(0.0);
         
         orientation_.fill(0.0);
-        
         orientation_ref_.fill(0.0);
-        //orientation_ref_ << -2.79058, -1.40391, 2.52841;
 
         joints_orientation_cmd_.fill(0.0);
         joints_orientation_dot_.fill(0.0);
@@ -152,10 +145,10 @@ void VfForceController::Startup()
         open_hand_ = false;
         
         svd_vect_.resize(3);
-        svd_.reset(new svd_t(3,Ndof_controlled_));
+        svd_.reset(new svd_t(4,3)); // It should have the same dimensionality of the problem
 	
 	// Reset force filter
-	for(int i=1; i<3; i++)
+	for(int i=0; i<3; i++)
 	  force_filters_[i].Reset();
 	  
 	// Create the scale adapter
@@ -163,21 +156,13 @@ void VfForceController::Startup()
 	  
 	// Inverse kinematics pre-allocations
 	svd_->compute(jacobian_t_, ComputeThinU | ComputeThinV); // This is not rt safe! We trigger it here to pre-allocate the internal variables
-	matrixU_t_.resize(3,3);
-	matrixV_.resize(Ndof_controlled_,3);
-	jacobian_t_pinv_tmp_.resize(Ndof_controlled_,3);
+	matrixU_t_.resize(3,4); // Eigen does some tricks with the dimensionalities, check the .h for info
+	matrixV_.resize(3,3);
+	jacobian_t_pinv_tmp_.resize(3,3);
 	
 
 #ifdef USE_ROS_RT_PUBLISHER
 	if(ros::master::check()){ 
-//              rt_publishers_.AddPublisher(*ros_nh_ptr_,"user_torques",Ndof_controlled_,&user_torques_);      
-//              rt_publishers_.AddPublisher(*ros_nh_ptr_,"id_torques",Ndof_controlled_,&torques_id_);
-// 		rt_publishers_.AddPublisher(*ros_nh_ptr_,"user_force",3,&f_user_);
-// 		rt_publishers_.AddPublisher(*ros_nh_ptr_,"vm_force",3,&f_vm_);
-// 		rt_publishers_.AddPublisher(*ros_nh_ptr_,"cmd_force",3,&f_cmd_);
-	  
-	  
-
 		boost::shared_ptr<RealTimePublisherWrench> tmp_ptr = NULL;
 		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"vm_force",root_name_);
 		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_vm_);
@@ -189,11 +174,6 @@ void VfForceController::Startup()
 		rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"scales",scales_.size(),&scales_);
                 rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"K",Ks_.size(),&Ks_);
 		rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase",phase_.size(),&phase_);
-		//rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase_dot",phase_dot_.size(),&phase_dot_);
-                //rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase_ddot",phase_ddot_.size(),&phase_ddot_);
-		//rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"det_mv",det_mv_.size(),&det_mv_);
-		//rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"torque_mv",torque_mv_.size(),&torque_mv_);
-		//rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"power_mv",power_mv_.size(),&power_mv_);
 		
  		rt_publishers_path_.AddPublisher(*ros_nh_ptr_,"robot_pos",cart_pos_status_.size(),&cart_pos_status_);
 		for(int i=0; i<vm_nb_;i++)
@@ -222,10 +202,7 @@ void VfForceController::Shutdown()
 						  
 bool VfForceController::ReadConfig(const char* cfg_filename)
 {
-	//YAML::Node doc;
-	//GetYamlDoc(cfg_filename, doc);
-	
-    
+
 	if (!M3Controller::ReadConfig(cfg_filename))
 		return false;
 
@@ -254,14 +231,6 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	
  	for(int i=0;i<file_names.size();i++)
 	{
-	  // GMR
-	  //ModelParametersGMR* model_parameters_gmr = ModelParametersGMR::loadGMMFromMatrix(file_names[i]);
-	  //FunctionApproximatorGMR* fa_ptr = new FunctionApproximatorGMR(model_parameters_gmr);
-	  
-	  // MAKE SHARED POINTER
-	  //fa_shr_ptr_.reset(fa_ptr);
-	  //fa_vector_.push_back(fa_shr_ptr_);
-	  
 	  // Read from file the inputs / targets
 	  std::vector<std::vector<double> > data;
 	  ReadTxtFile(file_names[i].c_str(),data);
@@ -301,33 +270,6 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	  fa_shr_ptr_.reset(fa_ptr);
 	  fa_vector_.push_back(fa_shr_ptr_);
 	}
-	
-	// GMR
-	//ModelParametersGMR* model_parameters_gmr = ModelParametersGMR::loadGMMFromMatrix(file_name);
-	//FunctionApproximatorGMR* fa_ptr = new FunctionApproximatorGMR(model_parameters_gmr);
-	
-	/*
-	// CONVERT TO EIGEN MATRIX
-	MatrixXd inputs = VectorXd::LinSpaced(data.size(),0.0,1.0);
-	MatrixXd targets(data.size(), data[0].size()-1); // NOTE Skip time
-	for (int i = 0; i < data.size(); i++)
-	  targets.row(i) = VectorXd::Map(&data[i][1],data[0].size()-1);
-	
-	// MAKE THE FUNCTION APPROXIMATORS
-	int input_dim = 1;
-	int n_basis_functions = 25;
-	
-	// GMR
-	MetaParametersGMR* meta_parameters_gmr = new MetaParametersGMR(input_dim,n_basis_functions);
-	FunctionApproximatorGMR* fa_ptr = new FunctionApproximatorGMR(meta_parameters_gmr);
-	
-	// TRAIN
-	fa_ptr->train(inputs,targets);
-	*/
-	
-	
-	// MAKE SHARED POINTER
-	//fa_shr_ptr_.reset(fa_ptr);
 	
 	// IK
 	const YAML::Node& ik_node = doc["ik"];
@@ -386,7 +328,6 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	}
 	
 	return true;
-        
 }
 
 void VfForceController::StepStatus()
@@ -415,11 +356,8 @@ void VfForceController::StepStatus()
         
 	jacobian_t_= jacobian_position_.transpose();
 	
-	//jacobian_.transposeInPlace(); //NOTE No rt safe!!! http://eigen.tuxfamily.org/dox-devel/classEigen_1_1DenseBase.html#ac501bd942994af7a95d95bee7a16ad2a
 	// IK
-	//Eigen::JacobiSVD<Eigen::MatrixXd> svd;
 	svd_->compute(jacobian_t_, ComputeThinU | ComputeThinV);
-	//Eigen::VectorXd svd_vect = svd.singularValues();
         svd_vect_ = svd_->singularValues();
 	damp_max = 0.001;
 	epsilon = 0.01;
@@ -435,12 +373,8 @@ void VfForceController::StepStatus()
 	
 	jacobian_t_pinv_tmp_ = svd_->matrixV() * svd_vect_.asDiagonal();
 	jacobian_t_pinv_.noalias() = jacobian_t_pinv_tmp_ * matrixU_t_; // NOTE .noalias() does the trick
-	
-	//jacobian_t_pinv_ = svd_->matrixV() * svd_vect_.asDiagonal() * svd_->matrixU().transpose();
 	// END IK
 
-	//f_user_ = jacobian_t_pinv_ * (-1) * user_torques_;
-	
 	// Robot cart stuff
 	kin_->ComputeFk(position_status_,cart_pos_status_);
 	kin_->ComputeFkDot(position_status_,velocity_status_,cart_vel_status_);
@@ -483,11 +417,9 @@ void VfForceController::StepStatus()
           
 	}
 	
-	//std::cout<<"P "<<torque_mv_(0)*phase_dot_(0)<<std::endl;
-
 	user_torques_ = torques_status_ - torques_id_;
-
-        f_user_.noalias() = jacobian_t_pinv_ * (-1) * user_torques_;
+	
+        f_user_.noalias() = jacobian_t_pinv_ * (-1) * user_torques_.segment<4>(0);
 	
         // Filter the user force
         for(int i=0; i<3; i++)
@@ -564,7 +496,7 @@ void VfForceController::StepStatus()
           
           Ks_(i) = K_;
 	  
-          errors_[i] = (vm_state_[i] - cart_pos_status_.segment<3>(0));
+          //errors_[i] = (vm_state_[i] - cart_pos_status_.segment<3>(0));
           
 	  f_vm_ += scales_(i) * (K_ * (vm_state_[i] - cart_pos_status_.segment<3>(0)) + B_ * (vm_state_dot_[i] - cart_vel_status_.segment<3>(0))); // Sum over all the vms
 	}
@@ -595,8 +527,8 @@ void VfForceController::StepCommand()
         jacobian_t_reduced_.row(1) = jacobian_t_.row(1);
         jacobian_t_reduced_.row(2) = jacobian_t_.row(2);
         jacobian_t_reduced_.row(3) = jacobian_t_.row(3);*/
-
-        torques_cmd_ = jacobian_t_ * f_cmd_;
+	
+        torques_cmd_.noalias() = jacobian_t_ * f_cmd_;
         
         /*orientation_ = cart_pos_status_.segment<3>(3);
         
@@ -737,30 +669,7 @@ void VfForceController::StepCommand()
                     bot_->SetTorque_mNm(hand_chain_,i,m2mm(1));
                 }
             }
-            
-            /*if(loop_cnt_ > 5000)
-            {
-                for(int i=0;i<5;i++)
-                {
-                    bot_->SetStiffness(hand_chain_,i,1.0);
-                    bot_->SetSlewRateProportional(hand_chain_,i,1.0);
-                    bot_->SetModeTorqueGc(hand_chain_,i);
-                    bot_->SetTorque_mNm(hand_chain_,i,m2mm(0.01));
-                }
-            }
-            else
-            {
-                for(int i=0;i<5;i++)
-                {
-                    bot_->SetStiffness(hand_chain_,i,1.0);
-                    bot_->SetSlewRateProportional(hand_chain_,i,1.0);
-                    bot_->SetModeThetaGc(hand_chain_,i);
-                    bot_->SetThetaDeg(hand_chain_,i,0.0);
-                }
 
-            }*/
-            
-           
           }
 
 	SAVE_TIME(end_dt_cmd_);
