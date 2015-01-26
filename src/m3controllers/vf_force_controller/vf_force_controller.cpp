@@ -149,7 +149,7 @@ void VfForceController::Startup()
         
 	sum_ = 1.0;
         
-        open_hand_ = false;
+        open_hand_ = true;
         
         svd_vect_.resize(3);
         svd_.reset(new svd_t(3,Ndof_controlled_));
@@ -476,10 +476,10 @@ void VfForceController::StepStatus()
 	  //torque_mv_(i) = vm_vector_[i]->getTorque();
           //power_mv_(i) = torque_mv_(i)*phase_dot_(i);
           
-          if(phase_(i)>= 0.90)
-              open_hand_ = true;
-          if(phase_(i) <= 0.01)
-              open_hand_ = false;
+        if (phase_(i) >= 0.75)
+            open_hand_ = true;
+        else if (phase_(i) <= 0.25)
+            open_hand_ = false;
           
 	}
 	
