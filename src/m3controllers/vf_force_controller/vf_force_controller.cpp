@@ -57,56 +57,16 @@ void VfForceController::Startup()
 	cart_pos_cmd_.resize(cart_size_);
 	cart_vel_status_.resize(cart_size_);
 	
-	// Number of virtual mechanisms
-	vm_nb_ = fa_vector_.size();
-	
-	cart_t vect(3);
-	vect.fill(0.0);
-	for(int i=0; i<vm_nb_;i++)
-	{
-	  vm_vector_ .push_back(new VirtualMechanismGmr(3,fa_vector_[i])); // Should be always 3 xyz
-	  vm_state_.push_back(vect);
-	  vm_state_dot_.push_back(vect);
-          errors_.push_back(vect);
-	}
-	
-	vect.resize(3+3); // NOTE dim = dim(mean) + dim(variance)
-	vect.fill(0.0);
-	for(int i=0; i<vm_nb_;i++)
-	{
-	  vm_kernel_.push_back(vect);
-	}
-	
-	for(int i=0; i<vm_nb_;i++)
-        {
-            vm_vector_[i]->Init();
-	    //vm_vector_[i]->setAdaptGains(adapt_gains_[i]);
-	    vm_vector_[i]->setWeightedDist(use_weighted_dist_[i]);
-        }
 	
 	// User velocity, vf and joint vel commands
 	jacobian_.resize(6,Ndof_);
-        
         jacobian_position_.resize(3,4);
         jacobian_orientation_.resize(3,3);
-        
 	jacobian_t_.resize(4,3); // only pos
 	jacobian_t_pinv_.resize(3,4); // only pos
         
-        //jacobian_t_reduced_.resize(4,3);
-
-	scales_.resize(vm_nb_);
-	phase_.resize(vm_nb_);
-	phase_dot_.resize(vm_nb_);
-        phase_ddot_.resize(vm_nb_);
-        fades_.resize(vm_nb_);
-	det_mv_.resize(vm_nb_);
-	torque_mv_.resize(vm_nb_);
-        power_mv_.resize(vm_nb_);
-        Ks_.resize(vm_nb_);
 	f_user_.resize(3);
 	f_vm_.resize(3);
-	f_cmd_.resize(3);
        
 	orientation_ref_.resize(3);
 	orientation_.resize(3);
@@ -117,31 +77,14 @@ void VfForceController::Startup()
 	// Clear
 	f_user_.fill(0.0);
 	f_vm_.fill(0.0);
-	f_cmd_.fill(0.0);
-	scales_ .fill(0.0);
-	phase_.fill(0.0);
-	phase_dot_.fill(0.0);
-        phase_ddot_.fill(0.0);
-	det_mv_.fill(0.0);
-	torque_mv_.fill(0.0);
-        power_mv_.fill(0.0);
-	fades_.fill(0.0);
-        Ks_.fill(0.0);
-        
+	
         orientation_.fill(0.0);
         orientation_ref_.fill(0.0);
 
         joints_orientation_cmd_.fill(0.0);
         joints_orientation_dot_.fill(0.0);
         joint_orientation_.fill(0.0);
-        
-        if (vm_nb_ > 1)
-            treshold_ = 1.0/vm_nb_ + 0.1;
-        else
-            treshold_ = 0.0;
-        
-	sum_ = 1.0;
-        
+       
         open_hand_ = false;
         
         svd_vect_.resize(3);
@@ -151,9 +94,6 @@ void VfForceController::Startup()
 	for(int i=0; i<3; i++)
 	  force_filters_[i].Reset();
 	  
-	// Create the scale adapter
-	min_jerk_scale_.Create(0,0,0,1,treshold_,0.9);
-	  
 	// Inverse kinematics pre-allocations
 	svd_->compute(jacobian_t_, ComputeThinU | ComputeThinV); // This is not rt safe! We trigger it here to pre-allocate the internal variables
 	matrixU_t_.resize(3,4); // Eigen does some tricks with the dimensionalities, check the .h for info
@@ -161,38 +101,8 @@ void VfForceController::Startup()
 	jacobian_t_pinv_tmp_.resize(3,3);
 	
 
-#ifdef USE_ROS_RT_PUBLISHER
-	if(ros::master::check()){ 
-		boost::shared_ptr<RealTimePublisherWrench> tmp_ptr = NULL;
-		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"vm_force",root_name_);
-		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_vm_);
-		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"user_force",root_name_);
-		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_user_);
-		tmp_ptr = boost::make_shared<RealTimePublisherWrench>(*ros_nh_ptr_,"cmd_force",root_name_);
-		rt_publishers_wrench_.AddPublisher(tmp_ptr,&f_cmd_);
-		
-		rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"scales",scales_.size(),&scales_);
-                rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"K",Ks_.size(),&Ks_);
-		rt_publishers_values_.AddPublisher(*ros_nh_ptr_,"phase",phase_.size(),&phase_);
-		
- 		rt_publishers_path_.AddPublisher(*ros_nh_ptr_,"robot_pos",cart_pos_status_.size(),&cart_pos_status_);
-		for(int i=0; i<vm_nb_;i++)
-		{
-		  std::string topic_name = "vm_pos_" + std::to_string(i+1);
-		  rt_publishers_path_.AddPublisher(*ros_nh_ptr_,topic_name,vm_state_[i].size(),&vm_state_[i]);
-                  
-                  topic_name = "error_" + std::to_string(i+1);
-                  rt_publishers_values_.AddPublisher(*ros_nh_ptr_,topic_name,errors_[i].size(),&errors_[i]);
-		  
-		  topic_name = "vm_ker_" + std::to_string(i+1);
-		  boost::shared_ptr<RealTimePublisherMarkers> tmp_ptr = boost::make_shared<RealTimePublisherMarkers>(*ros_nh_ptr_,topic_name,root_name_);
-		  rt_publishers_markers_.AddPublisher(tmp_ptr,&vm_kernel_[i]);
-		}
-	}
-#endif
-
-    INIT_CNT(tmp_dt_status_);
-    INIT_CNT(tmp_dt_cmd_);
+	INIT_CNT(tmp_dt_status_);
+	INIT_CNT(tmp_dt_cmd_);
 }
 
 void VfForceController::Shutdown()
@@ -208,69 +118,6 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 
 	doc["dynamic"] >> dyn_component_name_;
 
-	// RETRAIN THE DATA FROM TXT FILE
-	std::vector<std::string> file_names;
-	std::string prob_mode_string;
-	bool serialized;
-	doc["file_names"] >> file_names;
-	doc["serialized"] >> serialized;
-	doc["adapt_gains"] >> adapt_gains_;
-	doc["adapt_gains"] >> use_weighted_dist_;
-	doc["prob_mode"] >> prob_mode_string;
-	
-	if (prob_mode_string == "scaled")
-	  prob_mode_ = SCALED;
-	else if (prob_mode_string == "conditional")
-	  prob_mode_ = CONDITIONAL;
-	else if (prob_mode_string == "priors")
-	  prob_mode_ = PRIORS;
-	else if (prob_mode_string == "mix")
-	  prob_mode_ = MIX;
-	else
-	   prob_mode_ = SCALED; // Default
-	
- 	for(int i=0;i<file_names.size();i++)
-	{
-	  // Read from file the inputs / targets
-	  std::vector<std::vector<double> > data;
-	  ReadTxtFile(file_names[i].c_str(),data);
-	  FunctionApproximatorGMR* fa_ptr = NULL;
-	  
-	  if(!serialized)
-	  {
-	    // CONVERT TO EIGEN MATRIX
-	    //MatrixXd inputs(data.size(), 1);
-	    MatrixXd inputs = VectorXd::LinSpaced(data.size(),0.0,1.0);
-	    MatrixXd targets(data.size(), data[0].size()-1); // NOTE Skip time
-	    for (int i = 0; i < data.size(); i++)
-	    {
-	      targets.row(i) = VectorXd::Map(&data[i][1],data[0].size()-1);
-	      //inputs.row(i) = VectorXd::Map(&data[i][0],1);
-	    }
-	    
-	    // MAKE THE FUNCTION APPROXIMATORS
-	    int input_dim = 1;
-	    int n_basis_functions = 6;
-	    
-	    // GMR
-	    MetaParametersGMR* meta_parameters_gmr = new MetaParametersGMR(input_dim,n_basis_functions);
-	    fa_ptr = new FunctionApproximatorGMR(meta_parameters_gmr);
-	    
-	    // TRAIN
-	    fa_ptr->train(inputs,targets);
-
-	  }
-	  else
-	  {
-	    ModelParametersGMR* model_parameters_gmr = ModelParametersGMR::loadGMMFromMatrix(file_names[i]);
-	    fa_ptr = new FunctionApproximatorGMR(model_parameters_gmr);
-	  }
-	
-	  // MAKE SHARED POINTER
-	  fa_shr_ptr_.reset(fa_ptr);
-	  fa_vector_.push_back(fa_shr_ptr_);
-	}
-	
 	// IK
 	const YAML::Node& ik_node = doc["ik"];
 	double damp_max, epsilon;
@@ -379,43 +226,14 @@ void VfForceController::StepStatus()
 	kin_->ComputeFk(position_status_,cart_pos_status_);
 	kin_->ComputeFkDot(position_status_,velocity_status_,cart_vel_status_);
 	
-	// Update the vms, take their distances
-	for(int i=0; i<vm_nb_;i++)
-	{
-	  vm_vector_[i]->Update(cart_pos_status_.segment<3>(0),cart_vel_status_.segment<3>(0),dt_);
-	  
-	  switch(prob_mode_) 
-	  {
-	    case SCALED:
-	      scales_(i) = 1/(vm_vector_[i]->getDistance(cart_pos_status_.segment<3>(0)) + 0.001); // NOTE 0.001 it's kind of eps to avoid division by 0
-	      break;
-	    case CONDITIONAL:
-	      scales_(i) = vm_vector_[i]->getProbability(cart_pos_status_.segment<3>(0));
-	      break;
-	    case PRIORS:
-	      scales_(i) = std::exp(-10*vm_vector_[i]->getDistance(cart_pos_status_.segment<3>(0)));
-	      break;
-	    case MIX:
-	      scales_(i) = vm_vector_[i]->getProbability(cart_pos_status_.segment<3>(0));
-	      break;
-	    default:
-	      break;
-	  }
-	    
-          //fades_(i) = vm_vector_[i]->getFade();
-	  phase_(i) = vm_vector_[i]->getPhase();
-	  //phase_dot_(i) = vm_vector_[i]->getPhaseDot();
-          //phase_ddot_(i) = vm_vector_[i]->getPhaseDDot();
-	  //det_mv_(i) = vm_vector_[i]->getDet();
-	  //torque_mv_(i) = vm_vector_[i]->getTorque();
-          //power_mv_(i) = torque_mv_(i)*phase_dot_(i);
-          
-          if(phase_(i)>= 0.90)
-              open_hand_ = true;
-          if(phase_(i) <= 0.01)
-              open_hand_ = false;
-          
-	}
+	// Update the virtual mechanisms
+	mechanism_manager_.Update(cart_pos_status_.segment<3>(0),cart_vel_status_.segment<3>(0),dt_,f_vm_);
+	
+	/*if(phase_(i)>= 0.90)
+	    open_hand_ = true;
+	if(phase_(i) <= 0.01)
+	    open_hand_ = false;
+        */  
 	
 	user_torques_ = torques_status_ - torques_id_;
 	
@@ -445,67 +263,6 @@ void VfForceController::StepStatus()
                 vm_vector_[i]->setActive(false);
             }*/
 	
-
-	sum_ = scales_.sum();
-
-	// Compute and adapt the scales
-	for(int i=0; i<vm_nb_;i++)
-	{
-	  switch(prob_mode_) 
-	  {
-	    case SCALED:
-	      // Minjerk scaling
-	      if(scales_(i)/sum_ > treshold_)
-	      {
-		min_jerk_scale_.Compute(scales_(i)/sum_);
-		scales_(i) = min_jerk_scale_.GetX();
-	      }
-	      else
-		scales_(i) = 0.0;
-	      // Linear scaling
-	      /*if(scales_(i)/sum_ > treshold_)
-		scales_(i) = (treshold_ - scales_(i)/sum_)/(treshold_ - 1);
-	      else
-		scales_(i) = 0.0;*/
-	      break;
-	    case CONDITIONAL:
-	      scales_(i) =  scales_(i)/sum_;
-	      break;
-	    case PRIORS:
-	      scales_(i) = scales_(i);
-	      break;
-	     case MIX:
-	      scales_(i) = std::exp(-10*vm_vector_[i]->getDistance(cart_pos_status_.segment<3>(0))) * scales_(i)/sum_;
-	      break;
-	    default:
-	      break;
-	  }
-
-	}
-	// Compute the force from the vms
-	f_vm_.fill(0.0);
-	for(int i=0; i<vm_nb_;i++)
-	{  
-	  vm_vector_[i]->getState(vm_state_[i]);
-	  vm_vector_[i]->getStateDot(vm_state_dot_[i]);
-	  
-	  vm_vector_[i]->getLocalKernel(vm_kernel_[i]);
-	
-	  K_ = vm_vector_[i]->getK();
-	  B_ = vm_vector_[i]->getB();
-          
-          Ks_(i) = K_;
-	  
-          //errors_[i] = (vm_state_[i] - cart_pos_status_.segment<3>(0));
-          
-	  f_vm_ += scales_(i) * (K_ * (vm_state_[i] - cart_pos_status_.segment<3>(0)) + B_ * (vm_state_dot_[i] - cart_vel_status_.segment<3>(0))); // Sum over all the vms
-	}
-	
-	rt_publishers_path_.PublishAll();
-	rt_publishers_wrench_.PublishAll();
-	rt_publishers_values_.PublishAll();
-	rt_publishers_markers_.PublishAll();
-	
 	M3Controller::StepStatus(); // Update the status sds
 	
 	SAVE_TIME(end_dt_status_);
@@ -519,8 +276,6 @@ void VfForceController::StepCommand()
         SAVE_TIME(start_dt_cmd_);
   
 	M3Controller::StepCommand(); // Update the command sds
-
-        f_cmd_ = f_vm_;
         
          //for(int i=0;i<Ndof_controlled_;i++)
         /*jacobian_t_reduced_.row(0) = jacobian_t_.row(0);
@@ -528,7 +283,7 @@ void VfForceController::StepCommand()
         jacobian_t_reduced_.row(2) = jacobian_t_.row(2);
         jacobian_t_reduced_.row(3) = jacobian_t_.row(3);*/
 	
-        torques_cmd_.noalias() = jacobian_t_ * f_cmd_;
+        torques_cmd_.noalias() = jacobian_t_ * f_vm_;
         
         /*orientation_ = cart_pos_status_.segment<3>(3);
         
@@ -579,23 +334,23 @@ void VfForceController::StepCommand()
 
             if(open_hand_)
             {
-                for(int i=0;i<5;i++)
+                /*for(int i=0;i<5;i++)
                 {
                     bot_->SetStiffness(hand_chain_,i,1.0);
                     bot_->SetSlewRateProportional(hand_chain_,i,1.0);
                     bot_->SetModeThetaGc(hand_chain_,i);
                     bot_->SetThetaDeg(hand_chain_,i,0.0);
-                }
+                }*/
             }
             else
             {
-                for(int i=0;i<5;i++)
+                /*for(int i=0;i<5;i++)
                 {
                     bot_->SetStiffness(hand_chain_,i,1.0);
                     bot_->SetSlewRateProportional(hand_chain_,i,1.0);
                     bot_->SetModeTorqueGc(hand_chain_,i);
                     bot_->SetTorque_mNm(hand_chain_,i,m2mm(1));
-                }
+                }*/
             }
             
             /*bot_->SetStiffness(chain_,4,1.0);
@@ -651,23 +406,23 @@ void VfForceController::StepCommand()
             
             if(open_hand_)
             {
-                for(int i=0;i<5;i++)
+              /*  for(int i=0;i<5;i++)
                 {
                     bot_->SetStiffness(hand_chain_,i,1.0);
                     bot_->SetSlewRateProportional(hand_chain_,i,1.0);
                     bot_->SetModeThetaGc(hand_chain_,i);
                     bot_->SetThetaDeg(hand_chain_,i,0.0);
-                }
+                }*/
             }
             else
             {
-                for(int i=0;i<5;i++)
+                /*for(int i=0;i<5;i++)
                 {
                     bot_->SetStiffness(hand_chain_,i,1.0);
                     bot_->SetSlewRateProportional(hand_chain_,i,1.0);
                     bot_->SetModeTorqueGc(hand_chain_,i);
                     bot_->SetTorque_mNm(hand_chain_,i,m2mm(1));
-                }
+                }*/
             }
 
           }

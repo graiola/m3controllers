@@ -21,13 +21,8 @@
 ////////// KDL_KINEMATICS
 #include <kdl_kinematics/kdl_kinematics.h>
 
-////////// VIRTUAL_MECHANISM
-#include <virtual_mechanism/virtual_mechanism_gmr.h>
-
-////////// Function Approximator
-#include <functionapproximators/FunctionApproximatorGMR.hpp>
-#include <functionapproximators/MetaParametersGMR.hpp>
-#include <functionapproximators/ModelParametersGMR.hpp>
+////////// Mechanism Manager
+#include <mechanism_manager/mechanism_manager.h>
 
 ////////// Activate some timing infos
 static int tmp_dt_status_;
@@ -58,7 +53,6 @@ inline double count2Sec(const long long in){
 
 namespace m3controllers
 {
-  typedef DmpBbo::FunctionApproximatorGMR fa_t;
   typedef Eigen::JacobiSVD<Eigen::MatrixXd> svd_t;
 	
 class VfForceController : public M3Controller
@@ -77,25 +71,11 @@ class VfForceController : public M3Controller
 		
 	private:
 		enum {DEFAULT};
-
-		enum prob_mode_t {SCALED,CONDITIONAL,PRIORS,MIX};
-		prob_mode_t prob_mode_;
-		
-		tools::RealTimePublishers<tools::RealTimePublisherPath> rt_publishers_path_;
-		tools::RealTimePublishers<tools::RealTimePublisherWrench> rt_publishers_wrench_;
-		tools::RealTimePublishers<tools::RealTimePublisherJoints> rt_publishers_values_;
-		tools::RealTimePublishers<tools::RealTimePublisherMarkers> rt_publishers_markers_; 
 		
 		std::string dyn_component_name_, cart_mask_str_, end_effector_name_, root_name_;
 		m3::M3Dynamatics* dyn_component_;
-
-		boost::shared_ptr<fa_t> fa_shr_ptr_;
 		
-		std::vector<boost::shared_ptr<fa_t> > fa_vector_;
-		
-		std::vector<virtual_mechanism_gmr::VirtualMechanismGmr*> vm_vector_;
-		
-		int vm_nb_;
+		mechanism_manager::MechanismManager mechanism_manager_;
 		
 		kdl_kinematics::KDLKinematics* kin_;
 		
@@ -109,14 +89,7 @@ class VfForceController : public M3Controller
 		cart_t cart_pos_status_;
 		cart_t cart_pos_cmd_;
 		cart_t cart_vel_status_;
-		
-                std::vector<cart_t> errors_;
-                
-		std::vector<cart_t> vm_state_;
-		std::vector<cart_t> vm_state_dot_;
-		std::vector<cart_t> vm_kernel_;
-		
-                
+       
                 Eigen::MatrixXd jacobian_position_;
                 Eigen::MatrixXd jacobian_orientation_;
                 
@@ -128,34 +101,16 @@ class VfForceController : public M3Controller
 		Eigen::MatrixXd jacobian_t_pinv_;
 		
 		int cart_size_;
-		double treshold_;
-                Eigen::VectorXd Ks_;
-		Eigen::VectorXd scales_;
                 Eigen::VectorXd svd_vect_;
                 boost::shared_ptr<svd_t> svd_;
                 
 		cart_t f_user_;
 		cart_t f_vm_;
-		cart_t f_cmd_;
 		
                 double svd_curr, damp, damp_max, epsilon;
 		double dt_;
-		double B_, K_;
-		double sum_;
-		Eigen::VectorXd phase_;
-		Eigen::VectorXd phase_dot_;
-                Eigen::VectorXd phase_ddot_;
-		Eigen::VectorXd det_mv_;
-		Eigen::VectorXd torque_mv_;
-                Eigen::VectorXd power_mv_;
-                Eigen::VectorXd fades_;
 		
 		std::vector<m3::M3SensorFilter> force_filters_;
-		
-		tools::MinJerk min_jerk_scale_;
-		
-		std::vector<bool> use_weighted_dist_;
-		std::vector<bool> adapt_gains_;
 		
 		Eigen::MatrixXd matrixU_t_;
 		Eigen::MatrixXd matrixV_;
@@ -175,7 +130,6 @@ class VfForceController : public M3Controller
                 M3Chain hand_chain_;
 
                 bool open_hand_;
-
 };
 
 
