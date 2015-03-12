@@ -31,13 +31,21 @@ void VfForceController::Startup()
 {	
 	M3Controller::Startup();
 	
+	// Set the kinematic mask
+	kin_->setMask("1,1,1,0,0,0"); // xyz
+
+	cart_size_ = kin_->getCartSize();
+	Nodf_kin_ = kin_->getNdof();
+	
 	// Resize
 	torques_id_.resize(Ndof_controlled_);
 	user_torques_.resize(Ndof_controlled_);
-        torques_cmd_.resize(4);
+        torques_cmd_.resize(Nodf_kin_);
         torques_status_.resize(Ndof_controlled_);
         position_status_.resize(Ndof_controlled_);
         velocity_status_.resize(Ndof_controlled_);
+	f_user_.resize(3);
+	f_vm_.resize(3);
         
 	// Clear
 	torques_id_.fill(0.0);
@@ -46,59 +54,34 @@ void VfForceController::Startup()
         torques_status_.fill(0.0);
         position_status_.fill(0.0);
         velocity_status_.fill(0.0);
-	
-	// Set the kinematic mask
-	kin_->setMask("1,1,1,1,1,1"); // xyz rpy
-
-	cart_size_ = kin_->getCartSize();
+	f_user_.fill(0.0);
+	f_vm_.fill(0.0);
 	
 	// Cart resize
 	cart_pos_status_.resize(cart_size_);
 	cart_pos_cmd_.resize(cart_size_);
 	cart_vel_status_.resize(cart_size_);
 	
-	
 	// User velocity, vf and joint vel commands
-	jacobian_.resize(6,Ndof_);
-        jacobian_position_.resize(3,4);
-        jacobian_orientation_.resize(3,3);
-	jacobian_t_.resize(4,3); // only pos
-	jacobian_t_pinv_.resize(3,4); // only pos
-        
-	f_user_.resize(3);
-	f_vm_.resize(3);
-       
-	orientation_ref_.resize(3);
-	orientation_.resize(3);
-        joints_orientation_cmd_.resize(3);
-        joints_orientation_dot_.resize(3);
-        joint_orientation_.resize(3);
-	
-	// Clear
-	f_user_.fill(0.0);
-	f_vm_.fill(0.0);
-	
-        orientation_.fill(0.0);
-        orientation_ref_.fill(0.0);
+	jacobian_.resize(cart_size_,Nodf_kin_);
+        //jacobian_position_.resize(3,Nodf_kin_);
+	jacobian_t_.resize(Nodf_kin_,cart_size_); // only pos
+	jacobian_t_pinv_.resize(cart_size_,Nodf_kin_); // only pos
 
-        joints_orientation_cmd_.fill(0.0);
-        joints_orientation_dot_.fill(0.0);
-        joint_orientation_.fill(0.0);
-       
         open_hand_ = false;
         
-        svd_vect_.resize(3);
-        svd_.reset(new svd_t(4,3)); // It should have the same dimensionality of the problem
+        svd_vect_.resize(cart_size_);
+        svd_.reset(new svd_t(Nodf_kin_,cart_size_)); // It should have the same dimensionality of the problem
 	
 	// Reset force filter
-	for(int i=0; i<3; i++)
+	for(int i=0; i<cart_size_; i++)
 	  force_filters_[i].Reset();
 	  
 	// Inverse kinematics pre-allocations
 	svd_->compute(jacobian_t_, ComputeThinU | ComputeThinV); // This is not rt safe! We trigger it here to pre-allocate the internal variables
-	matrixU_t_.resize(3,4); // Eigen does some tricks with the dimensionalities, check the .h for info
-	matrixV_.resize(3,3);
-	jacobian_t_pinv_tmp_.resize(3,3);
+	matrixU_t_.resize(cart_size_,Nodf_kin_); // Eigen does some tricks with the dimensionalities, check the .h for info
+	matrixV_.resize(cart_size_,cart_size_);
+	jacobian_t_pinv_tmp_.resize(cart_size_,cart_size_);
 	
 
 	INIT_CNT(tmp_dt_status_);
@@ -199,9 +182,9 @@ void VfForceController::StepStatus()
             
 	kin_->ComputeJac(position_status_,jacobian_);
         
-        jacobian_position_ = jacobian_.block<3,4>(0,0);
+        //jacobian_position_ = jacobian_.block<3,4>(0,0);
         
-	jacobian_t_= jacobian_position_.transpose();
+	jacobian_t_= jacobian_.transpose();
 	
 	// IK
 	svd_->compute(jacobian_t_, ComputeThinU | ComputeThinV);
@@ -227,7 +210,7 @@ void VfForceController::StepStatus()
 	kin_->ComputeFkDot(position_status_,velocity_status_,cart_vel_status_);
 	
 	// Update the virtual mechanisms
-	mechanism_manager_.Update(cart_pos_status_.segment<3>(0),cart_vel_status_.segment<3>(0),dt_,f_vm_);
+	mechanism_manager_.Update(cart_pos_status_,cart_vel_status_,dt_,f_vm_);
 	
 	/*if(phase_(i)>= 0.90)
 	    open_hand_ = true;
@@ -277,46 +260,13 @@ void VfForceController::StepCommand()
   
 	M3Controller::StepCommand(); // Update the command sds
         
-         //for(int i=0;i<Ndof_controlled_;i++)
-        /*jacobian_t_reduced_.row(0) = jacobian_t_.row(0);
-        jacobian_t_reduced_.row(1) = jacobian_t_.row(1);
-        jacobian_t_reduced_.row(2) = jacobian_t_.row(2);
-        jacobian_t_reduced_.row(3) = jacobian_t_.row(3);*/
-	
         torques_cmd_.noalias() = jacobian_t_ * f_vm_;
         
-        /*orientation_ = cart_pos_status_.segment<3>(3);
-        
-        Eigen::AngleAxisd rollAngle(orientation_(2), Eigen::Vector3d::UnitZ());
-        Eigen::AngleAxisd yawAngle(orientation_(1), Eigen::Vector3d::UnitY());
-        Eigen::AngleAxisd pitchAngle(orientation_(0), Eigen::Vector3d::UnitX());
-        Eigen::Quaternion<double> q = rollAngle  * pitchAngle *  yawAngle;
-        Eigen::Quaternion<double> qref(1.0,0.0,0.0,0.0);
-        rotArm = q.matrix();
-        rotRef = qref.matrix();
-        rotWrist = rotArm.transpose() * rotRef;
-        
-        // Original
-        /*joints_orientation_cmd_(2) = -std::atan2(rotWrist(1,0),rotWrist(0,0));
-        joints_orientation_cmd_(1) = std::atan2(rotWrist(2,0),std::sqrt(std::pow(rotWrist(2,1),2) + std::pow(rotWrist(2,2),2)));
-        joints_orientation_cmd_(0) = std::atan2(rotWrist(2,1),rotWrist(2,2));
-        
-        
-        joints_orientation_cmd_(2) = -std::atan2(rotWrist(1,0),rotWrist(0,0));
-        joints_orientation_cmd_(1) = std::atan2(rotWrist(2,0),std::sqrt(std::pow(rotWrist(2,1),2) + std::pow(rotWrist(2,2),2)));
-        joints_orientation_cmd_(0) = std::atan2(rotWrist(2,1),rotWrist(2,2));
-        
-        
-        joint_orientation_ = position_status_.segment<3>(4);
-        
-        joints_orientation_dot_ = 1000 * (joints_orientation_cmd_ - joint_orientation_);
-        joints_orientation_cmd_ = joints_orientation_dot_ * dt_ + joint_orientation_;
-        */
           // Motors on
           if (m3_controller_interface_command_.enable())
           {
             bot_->SetMotorPowerOn();
-            for(int i=0;i<4;i++)
+            for(int i=0;i<Nodf_kin_;i++)
             {
                 bot_->SetStiffness(chain_,i,1.0);
                 bot_->SetSlewRateProportional(chain_,i,1.0);
@@ -324,7 +274,7 @@ void VfForceController::StepCommand()
                 bot_->SetTorque_mNm(chain_,i,m2mm(torques_cmd_[i]));
             }
 
-            for(int i=4;i<Ndof_;i++)
+            for(int i=Nodf_kin_;i<Ndof_;i++)
             {
                 bot_->SetStiffness(chain_,i,1.0);
                 bot_->SetSlewRateProportional(chain_,i,1.0);
@@ -352,27 +302,12 @@ void VfForceController::StepCommand()
                     bot_->SetTorque_mNm(hand_chain_,i,m2mm(1));
                 }*/
             }
-            
-            /*bot_->SetStiffness(chain_,4,1.0);
-            bot_->SetSlewRateProportional(chain_,4,1.0);
-            bot_->SetModeThetaGc(chain_,4);
-            bot_->SetThetaDeg(chain_,4,RAD2DEG(joints_orientation_cmd_(0)));
-
-            bot_->SetStiffness(chain_,5,1.0);
-            bot_->SetSlewRateProportional(chain_,5,1.0);
-            bot_->SetModeThetaGc(chain_,5);
-            bot_->SetThetaDeg(chain_,5,RAD2DEG(joints_orientation_cmd_(1)));
-
-            bot_->SetStiffness(chain_,6,1.0);
-            bot_->SetSlewRateProportional(chain_,6,1.0);
-            bot_->SetModeThetaGc(chain_,6);
-            bot_->SetThetaDeg(chain_,6,RAD2DEG(joints_orientation_cmd_(2)));*/
 
           }
           else
           {
             bot_->SetMotorPowerOn();
-            for(int i=0;i<4;i++)
+            for(int i=0;i<Nodf_kin_;i++)
             {
                 bot_->SetStiffness(chain_,i,0.0);
                 bot_->SetSlewRateProportional(chain_,i,1.0);
@@ -380,7 +315,7 @@ void VfForceController::StepCommand()
                 //bot_->SetTorque_mNm(chain_,i,m2mm(user_torques_[i]));
             }
             
-            for(int i=4;i<Ndof_;i++)
+            for(int i=Nodf_kin_;i<Ndof_;i++)
             {
                 bot_->SetStiffness(chain_,i,1.0);
                 bot_->SetSlewRateProportional(chain_,i,1.0);
@@ -388,22 +323,7 @@ void VfForceController::StepCommand()
                 bot_->SetThetaDeg(chain_,i,0.0);
             }
 
-            /*bot_->SetStiffness(chain_,4,1.0);
-            bot_->SetSlewRateProportional(chain_,4,1.0);
-            bot_->SetModeThetaGc(chain_,4);
-            bot_->SetThetaDeg(chain_,4,RAD2DEG(joints_orientation_cmd_(0)));
 
-            bot_->SetStiffness(chain_,5,1.0);
-            bot_->SetSlewRateProportional(chain_,5,1.0);
-            bot_->SetModeThetaGc(chain_,5);
-            bot_->SetThetaDeg(chain_,5,RAD2DEG(joints_orientation_cmd_(1)));
-
-            bot_->SetStiffness(chain_,6,1.0);
-            bot_->SetSlewRateProportional(chain_,6,1.0);
-            bot_->SetModeThetaGc(chain_,6);
-            bot_->SetThetaDeg(chain_,6,RAD2DEG(joints_orientation_cmd_(2)));*/
-            
-            
             if(open_hand_)
             {
               /*  for(int i=0;i<5;i++)

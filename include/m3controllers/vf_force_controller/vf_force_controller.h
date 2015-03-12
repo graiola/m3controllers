@@ -90,17 +90,13 @@ class VfForceController : public M3Controller
 		cart_t cart_pos_cmd_;
 		cart_t cart_vel_status_;
        
-                Eigen::MatrixXd jacobian_position_;
-                Eigen::MatrixXd jacobian_orientation_;
-                
+                //Eigen::MatrixXd jacobian_position_;
 		Eigen::MatrixXd jacobian_;
-		Eigen::MatrixXd jacobian_t_;
-                
-                //Eigen::MatrixXd jacobian_t_reduced_;
-                //Eigen::MatrixXd jacobian_reduced_;
+		Eigen::MatrixXd jacobian_t_;               
 		Eigen::MatrixXd jacobian_t_pinv_;
 		
 		int cart_size_;
+		int Nodf_kin_;
                 Eigen::VectorXd svd_vect_;
                 boost::shared_ptr<svd_t> svd_;
                 
@@ -115,17 +111,6 @@ class VfForceController : public M3Controller
 		Eigen::MatrixXd matrixU_t_;
 		Eigen::MatrixXd matrixV_;
 		Eigen::MatrixXd jacobian_t_pinv_tmp_;
-		Eigen::VectorXd f_user_tmp_;
-		
-		Eigen::VectorXd orientation_ref_;
-		Eigen::VectorXd orientation_;
-                Eigen::VectorXd joints_orientation_cmd_;
-                Eigen::VectorXd joints_orientation_dot_;
-                Eigen::VectorXd joint_orientation_;
-
-                Eigen::Matrix3d rotArm;
-                Eigen::Matrix3d rotRef;
-                Eigen::Matrix3d rotWrist;
                 
                 M3Chain hand_chain_;
 
