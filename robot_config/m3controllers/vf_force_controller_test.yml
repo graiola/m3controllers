@@ -2,14 +2,9 @@ name: vf_force_controller_test
 shm_id: M3VFF
 humanoid: m3humanoid_right_left_arm_head_mr12
 chain: RIGHT_ARM
-joints_mask: 1,1,1,1,1,1,1
+joints_mask: 1,1,1,1,0,0,0
 controller_type: pos
 dynamic: m3dynamatics_right_arm_test
-file_names: ['/home/meka/m3controllers/data/shelf_1.txt','/home/meka/m3controllers/data/shelf_2.txt']  #['/home/meka/m3controllers/data/exp_2_kernels_2_goals/gmm_1.txt','/home/meka/m3controllers/data/exp_2_kernels_2_goals/gmm_2.txt']
-serialized: true
-prob_mode: conditional
-adapt_gains: [false,false]
-use_weighted_dist: [false,false]
 ik:
   damp_max: 0.8
   epsilon: 0.1
