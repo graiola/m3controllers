@@ -209,9 +209,6 @@ void VfForceController::StepStatus()
 	kin_->ComputeFk(position_status_,cart_pos_status_);
 	kin_->ComputeFkDot(position_status_,velocity_status_,cart_vel_status_);
 	
-	// Update the virtual mechanisms
-	mechanism_manager_.Update(cart_pos_status_,cart_vel_status_,dt_,f_vm_);
-	
 	/*if(phase_(i)>= 0.90)
 	    open_hand_ = true;
 	if(phase_(i) <= 0.01)
@@ -230,21 +227,20 @@ void VfForceController::StepStatus()
         }
         
         //if (f_user_.norm() < 2.0 && f_user_.norm() > -2.0)
-        /*if (f_user_.norm() < 4.0 && f_user_.norm() > -4.0)
-        {
-            f_user_.fill(0.0);
-            for(int i=0; i<vm_nb_;i++)
-            {
-                //std::cout<<"Active "<<f_user_.norm()<<std::endl;
-                vm_vector_[i]->setActive(true);
-            }
-        }
-        else
-            for(int i=0; i<vm_nb_;i++)
-            {
-                //std::cout<<"Deactive "<<f_user_.norm()<<std::endl;
-                vm_vector_[i]->setActive(false);
-            }*/
+        if (f_user_.norm() < 4.0 && f_user_.norm() > -4.0)
+	{
+          f_user_.fill(0.0);
+	  mechanism_manager_.Update(cart_pos_status_,cart_vel_status_,dt_,f_vm_,false); // no force applied
+	}
+	else
+	{
+	  mechanism_manager_.Update(cart_pos_status_,cart_vel_status_,dt_,f_vm_,true); 
+	}
+	  
+	// Update the virtual mechanisms
+	//mechanism_manager_.Update(cart_pos_status_,cart_vel_status_,dt_,f_vm_);
+	
+	
 	
 	M3Controller::StepStatus(); // Update the status sds
 	
