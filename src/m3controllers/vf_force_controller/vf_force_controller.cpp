@@ -69,6 +69,7 @@ void VfForceController::Startup()
 	jacobian_t_pinv_.resize(cart_size_,Nodf_kin_); // only pos
 
         open_hand_ = false;
+	move_forward_ = true;
         
         svd_vect_.resize(cart_size_);
         svd_.reset(new svd_t(Nodf_kin_,cart_size_)); // It should have the same dimensionality of the problem
@@ -209,12 +210,6 @@ void VfForceController::StepStatus()
 	kin_->ComputeFk(position_status_,cart_pos_status_);
 	kin_->ComputeFkDot(position_status_,velocity_status_,cart_vel_status_);
 	
-	/*if(phase_(i)>= 0.90)
-	    open_hand_ = true;
-	if(phase_(i) <= 0.01)
-	    open_hand_ = false;
-        */  
-	
 	user_torques_ = torques_status_ - torques_id_;
 	
         f_user_.noalias() = jacobian_t_pinv_ * (-1) * user_torques_.segment<4>(0);
@@ -230,18 +225,30 @@ void VfForceController::StepStatus()
         if (f_user_.norm() < 4.0 && f_user_.norm() > -4.0)
 	{
           f_user_.fill(0.0);
-	  mechanism_manager_.Update(cart_pos_status_,cart_vel_status_,dt_,f_vm_,false); // no force applied
+	  mechanism_manager_.Update(cart_pos_status_,cart_vel_status_,dt_,f_vm_,false,move_forward_); // no force applied
 	}
 	else
 	{
-	  mechanism_manager_.Update(cart_pos_status_,cart_vel_status_,dt_,f_vm_,true); 
+	  mechanism_manager_.Update(cart_pos_status_,cart_vel_status_,dt_,f_vm_,true,move_forward_); 
 	}
-	  
+	
+	for (int i=0;i<mechanism_manager_.GetNbVms();i++)
+	{
+	  if(mechanism_manager_.GetPhase(i)>= 0.90)
+	  {
+	      open_hand_ = true;
+	      move_forward_ = false;
+	  }
+	  if(mechanism_manager_.GetPhase(i) <= 0.01)
+	  {
+	      open_hand_ = false;
+	      move_forward_ = true;
+	  }
+	}
+	
 	// Update the virtual mechanisms
 	//mechanism_manager_.Update(cart_pos_status_,cart_vel_status_,dt_,f_vm_);
-	
-	
-	
+
 	M3Controller::StepStatus(); // Update the status sds
 	
 	SAVE_TIME(end_dt_status_);
@@ -280,23 +287,23 @@ void VfForceController::StepCommand()
 
             if(open_hand_)
             {
-                /*for(int i=0;i<5;i++)
+                for(int i=0;i<5;i++)
                 {
                     bot_->SetStiffness(hand_chain_,i,1.0);
                     bot_->SetSlewRateProportional(hand_chain_,i,1.0);
                     bot_->SetModeThetaGc(hand_chain_,i);
                     bot_->SetThetaDeg(hand_chain_,i,0.0);
-                }*/
+                }
             }
             else
             {
-                /*for(int i=0;i<5;i++)
+                for(int i=0;i<5;i++)
                 {
                     bot_->SetStiffness(hand_chain_,i,1.0);
                     bot_->SetSlewRateProportional(hand_chain_,i,1.0);
                     bot_->SetModeTorqueGc(hand_chain_,i);
                     bot_->SetTorque_mNm(hand_chain_,i,m2mm(1));
-                }*/
+                }
             }
 
           }
@@ -322,23 +329,23 @@ void VfForceController::StepCommand()
 
             if(open_hand_)
             {
-              /*  for(int i=0;i<5;i++)
+                for(int i=0;i<5;i++)
                 {
                     bot_->SetStiffness(hand_chain_,i,1.0);
                     bot_->SetSlewRateProportional(hand_chain_,i,1.0);
                     bot_->SetModeThetaGc(hand_chain_,i);
                     bot_->SetThetaDeg(hand_chain_,i,0.0);
-                }*/
+                }
             }
             else
             {
-                /*for(int i=0;i<5;i++)
+                for(int i=0;i<5;i++)
                 {
                     bot_->SetStiffness(hand_chain_,i,1.0);
                     bot_->SetSlewRateProportional(hand_chain_,i,1.0);
                     bot_->SetModeTorqueGc(hand_chain_,i);
                     bot_->SetTorque_mNm(hand_chain_,i,m2mm(1));
-                }*/
+                }
             }
 
           }

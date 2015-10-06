@@ -115,6 +115,7 @@ class VfForceController : public M3Controller
                 M3Chain hand_chain_;
 
                 bool open_hand_;
+		bool move_forward_;
 };
 
 
