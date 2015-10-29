@@ -54,6 +54,7 @@ inline double count2Sec(const long long in){
 namespace m3controllers
 {
   typedef Eigen::JacobiSVD<Eigen::MatrixXd> svd_t;
+  typedef Eigen::Quaternion<double> quaternion_t;
 	
 class VfForceController : public M3Controller
 {
@@ -86,10 +87,12 @@ class VfForceController : public M3Controller
                 joints_t position_status_;
                 joints_t velocity_status_;
                 
-		cart_t cart_pos_status_;
-		cart_t cart_pos_cmd_;
+		cart_t cart_pose_status_;
+                cart_t cart_pose_with_quat_status_;
 		cart_t cart_vel_status_;
        
+                quaternion_t quat_status_;
+                
                 //Eigen::MatrixXd jacobian_position_;
 		Eigen::MatrixXd jacobian_;
 		Eigen::MatrixXd jacobian_t_;               

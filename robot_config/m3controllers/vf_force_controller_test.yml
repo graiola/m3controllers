@@ -2,13 +2,13 @@ name: vf_force_controller_test
 shm_id: M3VFF
 humanoid: m3humanoid_right_left_arm_head_mr12
 chain: RIGHT_ARM
-joints_mask: 1,1,1,1,0,0,0
+joints_mask: 1,1,1,1,1,1,1
 controller_type: pos
 dynamic: m3dynamatics_right_arm_test
 ik:
   damp_max: 0.8
   epsilon: 0.1
-  cart_mask: 1,1,1,0,0,0
+  cart_mask: 1,1,1,1,1,1
 force_filter:
   cutoff_freq: 80
   order: 3
