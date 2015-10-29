@@ -235,15 +235,15 @@ void VfForceController::StepStatus()
           f_user_(i) =  force_filters_[i].GetX();
         }
         
-        //if (f_user_.norm() < 2.0 && f_user_.norm() > -2.0)
-        if (f_user_.norm() < 4.0 && f_user_.norm() > -4.0)
+        if (f_user_.norm() < 2.0 && f_user_.norm() > -2.0)
+        //if (f_user_.norm() < 4.0 && f_user_.norm() > -4.0)
 	{
           f_user_.fill(0.0);
-	  mechanism_manager_.Update(cart_pose_with_quat_status_,cart_vel_status_.segment<3>(0),dt_,f_vm_,false,move_forward_); // no force applied
+	  mechanism_manager_.Update(cart_pose_with_quat_status_,cart_vel_status_.segment<3>(0),dt_,f_vm_,false); // no force applied
 	}
 	else
 	{
-	  mechanism_manager_.Update(cart_pose_with_quat_status_,cart_vel_status_.segment<3>(0),dt_,f_vm_,true,move_forward_); 
+	  mechanism_manager_.Update(cart_pose_with_quat_status_,cart_vel_status_.segment<3>(0),dt_,f_vm_,true); 
 	}
 	
 	M3Controller::StepStatus(); // Update the status sds
