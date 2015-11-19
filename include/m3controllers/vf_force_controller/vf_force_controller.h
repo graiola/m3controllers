@@ -15,8 +15,8 @@
 #include <eigen3/Eigen/LU>
 
 ////////// Google protobuff
-//#include <google/protobuf/message.h>
-//#include "m3controllers/vf_controller/vf_controller.pb.h"
+#include <google/protobuf/message.h>
+#include "m3controllers/vf_force_controller/vf_force_controller.pb.h"
 
 ////////// KDL_KINEMATICS
 #include <kdl_kinematics/kdl_kinematics.h>
@@ -62,6 +62,10 @@ class VfForceController : public M3Controller
 		VfForceController():M3Controller(),kin_(NULL){}
 		~VfForceController(){if(kin_!=NULL) delete kin_;}
 		
+		google::protobuf::Message * GetCommand(){return &m3_force_controller_command_;}
+                google::protobuf::Message * GetStatus(){return &m3_force_controller_status_;}
+                google::protobuf::Message * GetParam(){return &m3_force_controller_param_;}
+		
 	protected:
 		bool ReadConfig(const char* filename);
 		void Startup();
@@ -69,6 +73,11 @@ class VfForceController : public M3Controller
 		void StepStatus();
 		void StepCommand();
 		bool LinkDependentComponents();
+                
+                /** Google protobuf messages */
+                VfForceControllerStatus m3_force_controller_status_;
+                VfForceControllerCommand m3_force_controller_command_;
+                VfForceControllerParam m3_force_controller_param_;
 		
 	private:
 		enum {DEFAULT};
@@ -105,6 +114,7 @@ class VfForceController : public M3Controller
                 
 		cart_t f_user_;
 		cart_t f_vm_;
+                cart_t f_user_est_;
 		
                 double svd_curr, damp, damp_max, epsilon;
 		double dt_;

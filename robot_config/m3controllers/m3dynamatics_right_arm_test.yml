@@ -120,6 +120,6 @@ param:
   payload_mass: 0.9
 #  payload_mass: 0.83799999999999997 #HAND
   use_accelerations: false
-  use_velocities: false
+  use_velocities: true
 version: iss
 

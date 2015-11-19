@@ -45,8 +45,9 @@ void VfForceController::Startup()
         torques_status_.resize(Ndof_controlled_);
         position_status_.resize(Ndof_controlled_);
         velocity_status_.resize(Ndof_controlled_);
-	f_user_.resize(3);
-	f_vm_.resize(3);
+	f_user_.resize(cart_size_);
+	f_vm_.resize(cart_size_);
+        f_user_est_.resize(cart_size_);
         
 	// Clear
 	torques_id_.fill(0.0);
@@ -57,6 +58,7 @@ void VfForceController::Startup()
         velocity_status_.fill(0.0);
 	f_user_.fill(0.0);
 	f_vm_.fill(0.0);
+        f_user_est_.fill(0.0);
 	
 	// Cart resize
 	cart_pose_status_.resize(cart_size_);
@@ -76,7 +78,7 @@ void VfForceController::Startup()
         svd_.reset(new svd_t(Nodf_kin_,cart_size_)); // It should have the same dimensionality of the problem
         
 	// Reset force filter
-	for(int i=0; i<3; i++)
+	for(int i=0; i<cart_size_; i++)
 	  force_filters_[i].Reset();
 	  
 	// Inverse kinematics pre-allocations
@@ -150,10 +152,9 @@ bool VfForceController::ReadConfig(const char* cfg_filename)
 	//force_filter_node["type"] >> filter_type;
 	force_filter_node["order"] >> order;
 	force_filter_node["cutoff_freq"] >> cutoff_freq;
-	
-	force_filters_.resize(3);
-	
-	for(int i=0; i<3; i++)
+        
+	force_filters_.resize(6); //HACK we dont know yet the cart dim
+	for(int i=0; i<6; i++)
 	{
 	  force_filters_[i].ReadConfig(force_filter_node);
 	  force_filters_[i].GetXdf()->SetOrder(order);
@@ -188,7 +189,7 @@ void VfForceController::StepStatus()
         //jacobian_position_ = jacobian_.block<3,4>(0,0);
         
 	jacobian_t_= jacobian_.transpose();
-	
+	/*
 	// IK
 	svd_->compute(jacobian_t_, ComputeThinU | ComputeThinV);
         svd_vect_ = svd_->singularValues();
@@ -207,7 +208,7 @@ void VfForceController::StepStatus()
 	jacobian_t_pinv_tmp_ = svd_->matrixV() * svd_vect_.asDiagonal();
 	jacobian_t_pinv_.noalias() = jacobian_t_pinv_tmp_ * matrixU_t_; // NOTE .noalias() does the trick
 	// END IK
-
+        */
 	// Robot cart stuff
 	kin_->ComputeFk(position_status_,cart_pose_status_);
 	kin_->ComputeFkDot(position_status_,velocity_status_,cart_vel_status_);
@@ -223,20 +224,26 @@ void VfForceController::StepStatus()
         quat_status_ = rollAngle * yawAngle  * pitchAngle;
         cart_pose_with_quat_status_ << cart_pose_status_.segment<3>(0), quat_status_.w(), quat_status_.x(), quat_status_.y(), quat_status_.z();
         
-
-	user_torques_ = torques_status_ - torques_id_;
-	
+        //f_user_est_.noalias() = f_vm_ + jacobian_t_pinv_ * (-1) * torques_id_;
+        /*
+        user_torques_ = torques_status_ - torques_id_;
         f_user_.noalias() = jacobian_t_pinv_ * (-1) * user_torques_;
-	
+
         // Filter the user force
-        for(int i=0; i<3; i++)
+        for(int i=0; i<cart_size_; i++)
         {
           force_filters_[i].Step(f_user_(i),0.0);
           f_user_(i) =  force_filters_[i].GetX();
         }
+        */
         
-        if (f_user_.norm() < 2.0 && f_user_.norm() > -2.0)
-        //if (f_user_.norm() < 4.0 && f_user_.norm() > -4.0)
+        if(m3_force_controller_command_.contact_force())
+            mechanism_manager_.Update(cart_pose_with_quat_status_,cart_vel_status_.segment<3>(0),dt_,f_vm_,true); // force applied
+        else
+            mechanism_manager_.Update(cart_pose_with_quat_status_,cart_vel_status_.segment<3>(0),dt_,f_vm_,false); // no force applied
+        /*
+        //if (f_user_.norm() < 2.0 && f_user_.norm() > -2.0)
+        if (f_user_.norm() < 3.0 && f_user_.norm() > -3.0)
 	{
           f_user_.fill(0.0);
 	  mechanism_manager_.Update(cart_pose_with_quat_status_,cart_vel_status_.segment<3>(0),dt_,f_vm_,false); // no force applied
@@ -245,6 +252,7 @@ void VfForceController::StepStatus()
 	{
 	  mechanism_manager_.Update(cart_pose_with_quat_status_,cart_vel_status_.segment<3>(0),dt_,f_vm_,true); 
 	}
+	*/
 	
 	M3Controller::StepStatus(); // Update the status sds
 	
@@ -262,6 +270,7 @@ void VfForceController::StepCommand()
         
         torques_cmd_.noalias() = jacobian_t_ * f_vm_;
         
+
           // Motors on
           if (m3_controller_interface_command_.enable())
           {

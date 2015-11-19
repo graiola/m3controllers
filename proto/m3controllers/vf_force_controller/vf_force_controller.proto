@@ -1,0 +1,17 @@
+option optimize_for = SPEED;
+import "component_base.proto";
+
+message VfForceControllerStatus
+{
+	optional M3BaseStatus	base=1;
+}
+
+message VfForceControllerParam
+{
+}
+
+message VfForceControllerCommand
+{
+        //optional bool enable=1	        [default = false]; //turn  on/off
+        optional bool contact_force=1	        [default = false];
+}
